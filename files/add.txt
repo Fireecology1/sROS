@@ -1,0 +1,22 @@
+
+s.miss0 <- data.frame(num=122:125, 
+                      fire=c('PNFI #1 13 yr ONT',
+                             'PNFI #2 12 yr ONT',
+                             'PNFI RW #1-41-2', 
+                             'Carp Lk PNFI WF QC'),
+                     CFI1=0, Fire.type='S', 
+                     ROS=c(7.6, 4.3, 3, 7.5),
+                     SFC=c(1.6, 0.59, 0.3, 0.9), #only 0.59 was meaasured
+      #Estimated SFC for 3/4 obs: C4 est: 1.64 (BUI 57); C5 est: 0.28 (BUI 25), 0.85 (BUI 45)
+                     CFC=c(0, 1.0, 0, 0), 
+                     Date=c('1977-05-19', '1976-08-04', 
+                            '1976-05-10', '1963-07-03') %>% ymd(),
+      ws=c(19, 10, 18, 25),
+      FFMC=c(91.7, 89.9, 90.4, 90.7), 
+      ISI=c(14.2, 7, 11.2, 16.7), 
+      DMC=c(57, 26, 20, 45), 
+      DC=c(107, 276, 86, 81), 
+      BUI=c(57, 42, 25, 45), 
+      MC.SA_season=c(1, 2, 1, 2), 
+      MC.SA_dens=2, 
+      MC.SA_stand=4, FT='Con') #consider all 4 to be pine stands (conifer type)

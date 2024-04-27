@@ -16,90 +16,70 @@ bibliography: references.bib
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
-                      root.dir = "c:/Dan/_Remote_projects/ccp_git/ccp-cfi")
+     root.dir = "c:/Dan/_Remote_projects/ccp-sROS/files")
+
 setwd("c:/Dan/_Remote_projects/ccp-sROS/files")
 
 #.libPaths("C:/Dan/RPackages")
 
-library(dplyr)
-library(stringr)
-library(ggplot2)
+library(tidyverse)
 
 #Get data frame, ready to query 
 #Import data frame
-fd <- read.csv('Fire_data_july2023.csv')  # with corrected SFC from McRae, Sharp p#16 to sharp.th
+fd <- read.csv('c:/Dan/_Remote_projects/ccp-sROS/files/fire_data_apr2024.csv')  # with corrected SFC from McRae, Sharp p#16 to sharp.th
 
 #FWI and moisture functions
-load(file="./wbmc4.rda")
+load(file="./wbmc5.rda")
 load(file='./mcF.rda')
 load(file='./ISI.rda')
+load(file='./gr-cf.rda')
 
 #set variables for modelling
-fd2 <- mutate(fd, 
+fd4 <- mutate(fd, 
               CFI=CFI1, #lower CFI only for multi-story stands
               FSG=FSG1)  #same for FSG
 
+#Deciduous data
+d1 <- read.csv('c:/Dan/_Remote_projects/ccp-sROS/files/fire_data_d1_oct2023.csv')
+
+#Combine conifer data with D1
+fd.all <- bind_rows(fd4 %>% select(
+  num:RH, Grass.Cure, Plot.Wd) %>%
+    mutate(Date=ymd(Date)), 
+  d1 %>% select(num:RH, Grass.Cure) %>%
+    mutate(Date=ymd(Date)))  
 
 ```
 
 ## Abstract
 
-Surface fire behaviour dominates in grassland and shrubland landscapes and is also common in some conifer forests. In dynamic conifer fire behaviour models, surface fire behaviour can help predict fire spread below the crowning threshold, under moderate fire danger conditions or under most conditions in high crown base forests.
+Fire behaviour in conifer forests can be overshadowed by the problem of crown fire, though surface fire occurrence is more common. Surface fire behaviour models can help predict fire spread below the crowning threshold, under moderate fire danger conditions or under most conditions in forest stands with a high crown base. We used a database of conifer-dominated experimental surface fires (n=91) to fit simple empirical models of rate of spread (ROS) that can be readily integrated within operational decision support systems. Final models include wind speed along with optional additional variables for estimated fine fuel moisture content and surface fuel consumption - positively, negatively, and positively correlated with ROS, respectively. While imprecise, these models are usually accurate enough (within +/- 1–3 m min^-1^) for most forecasting and fire management purposes.
 
-## 1. Introduction
+### [Process - get SF data]
 
-The rate of spread, or rate of forward advance, of a wildfire is recognized as its most important descriptive characteristic for fire managers [@vanwagner1965a]. Fire behaviour in the conifer forests of Canada is often a story about crown fire -- high intensity, rapidly moving volatile and dangerous fires with flames overtopping the trees [@alexander2016]. And yet in the chronology of fire events, most fire days are surface fire days [@wang2014]. Surface fires can be safely and routinely actioned by suppression crews and equipment [@wheatley2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
+```{r label=site.indexes, echo=FALSE, message=FALSE}
 
-As operational modelling systems in Canada evolve from fuel-type specific tools (VW 1990, FCFDG 1992) to more flexible formulations suitable for a range of conifer types [@Alexander2006, @perrakis2023], few tools for surface fires are available.
-
-The objective of this study was to use the database of Canadian experimental fires to produce simple and rapid models for estimating the ROS of surface fires burning in conifer stands.
-
-## 2. Methods
-
-#### Surface rate of spread
-
-Although most of this study was not focused on spread rate, it was previously noted that a simple surface fire model could readily be fitted to empirical observations, a simple but useful estimate in a dynamic conifer fire behaviour modelling system [e.g., @perrakis2020]. We used the surface fires in our data to fit simple empirical rate of spread (ROS) models based on the fire environment variables. Weather and moisture predictors tested included wind speed, mc (mc~SA~ or mc~FFMC~), DMC and ISI, in line with FBP System convention [@fcfdg1992; @cfsfiredangergroup2021]; additional variables related to fuel structure from the list of crown fire predictors were also tested: SFC, FSG, and density (from mc~SA~ categories).
-
-Consistent with the majority of surface fire behaviour models [@sullivan2009], we focussed on wind speed (WS) and dead fuel moisture content (mc) as primary variables of interest. Other variables in the burning database were also tested for inclusion.
-
-### [Obs process - indexes]
-
-```{r label=obs-table1A, echo=FALSE, message=FALSE}
-
-#index numbers for different sites
-porters <- filter(fd2, str_detect(fire, "PORTER")) %>% pull(num)
-sc <- filter(fd2, str_detect(fire, "SC")) %>% pull(num) #south corner fire is low dens.
-pg.low <- filter(fd2, str_detect(fire, "PRINCE")) %>%
+#Index numbers for different sites
+porters <- filter(fd4, str_detect(fire, "PORTER")) %>% pull(num)
+sc <- filter(fd4, str_detect(fire, "PNFI SC")) %>% pull(num) #south corner fire is low dens.
+pg.low <- filter(fd4, str_detect(fire, "PRINCE")) %>%
   filter(str_detect(fire, "# 4")) %>% pull(num)   #select shorter stands at PG site only
-pg.high <- filter(fd2, str_detect(fire, "PRINCE")) %>% 
+pg.high <- filter(fd4, str_detect(fire, "PRINCE")) %>% 
   filter(str_detect(fire, "# 1")) %>% pull(num)
-kenshoe <- filter(fd2, str_detect(fire, "KENSHOE")) %>% pull(num)
-sharp <- filter(fd2, str_detect(ExpProject, "Sharpsand IM")) %>% pull(num)  #original Sharpsand Immature stands only
-sharp.th <- filter(fd2, str_detect(ExpProject, "Sharpsand TH")) %>% pull(num)
-sharp.sm <- filter(fd2, str_detect(ExpProject, "Sharpsand SM")) %>% pull(num)
-rp <- filter(fd2, str_detect(fire, "PNFI RP")) %>% pull(num)
-darwin <- filter(fd2, str_detect(fire, "DARWIN")) %>% pull(num)  #1, 2, 6, 7 are  low density plots
+kenshoe <- filter(fd4, str_detect(fire, "KENSHOE")) %>% pull(num)
+sharp <- filter(fd4, str_detect(ExpProject, "Sharpsand IM")) %>% pull(num)  #original Sharpsand Immature stands only
+sharp.th <- filter(fd4, str_detect(ExpProject, "Sharpsand TH")) %>% pull(num)
+sharp.sm <- filter(fd4, str_detect(ExpProject, "Sharpsand SM")) %>% pull(num)
+rp <- filter(fd4, str_detect(fire, "PNFI RP")) %>% pull(num)
+darwin <- filter(fd4, str_detect(fire, "DARWIN")) %>% pull(num)  #1, 2, 6, 7 are  low density plots
 darwin.low <- c(66, 67, 90, 91)
-bigfish <- filter(fd2, str_detect(fire, "BIG FISH")) %>% pull(num)
-icfme <- 77:87 #order is A, 1, 3, 4, 5, 6, 7, 8a, 8b, 9, 2; fixed in icfme process
+bigfish <- filter(fd4, str_detect(fire, "BIG FISH")) %>% pull(num)
+icfme <- 77:87 #order is A, 1, 2, 3, 4, 5, 6, 7, 8a, 8b, 9; fixed in icfme process
 icfme.hd <- c(77:79, 82:87)  #all but p3, p4
 #archer <- 109:117
 pelican <- 109:110  #Changed for Mar2023; was 123-124
 #fpft <- c(119:122, 125:126)
-dewdrop <- filter(fd2, str_detect(ExpProject, 'Dewdrop')) %>% pull(num)
-
-
-```
-
-### Surface modelling
-
-```{r label=sROS, echo=FALSE, message=FALSE, warning=FALSE}
-#ROS models 
-#Surface ROS models:
-fd.surf <- filter(fd2, CFI==0)  #surface fire obs only
-
-#ISI function from mcsa?
-
+dewdrop <- filter(fd4, str_detect(ExpProject, 'Dewdrop')) %>% pull(num)
 
 #function to calculate isi.m
 isi.mcsa <- function(mcsa, ws) {
@@ -109,95 +89,351 @@ isi.mcsa <- function(mcsa, ws) {
   return(0.208*f_w*f_f)
 }
 
-#add isi.m variable to data frame
-fd.surf2 <- mutate(rowwise(fd.surf), isi.m=isi.mcsa(mcsa=MC.SA, ws=ws),
-                   dens2=as.factor(case_when(
-                     MC.SA_dens == 1 ~ 1, 
-                     MC.SA_dens == 2 ~ 1, 
-                     MC.SA_dens == 3 ~ 2)),
-                   dens3=as.factor(case_when(
-                     MC.SA_dens == 1 ~ 1,
-                     MC.SA_dens == 2 ~ 2,
-                     MC.SA_dens == 3 ~ 2)),
-                   dens.fc=as.factor(MC.SA_dens))
+#surface fires - extract all CFI1==0, calculate isi.m
+s.fires <- mutate(rowwise(fd.all), 
+                  isi.m=isi.mcsa(mc=MC.SA, ws=ws)) %>% #get ISI using MC.SA
+  filter(CFI1==0) %>% 
+  select(-CFI2) %>%
+  mutate(FT=as.factor(case_when(
+           str_detect(ExpProject, 'D1') ~ 'Decid',
+           str_detect(ExpProject, 'Dewdrop') ~ 'PPDF',
+           TRUE ~ 'Con'))
+         ) %>%
+  ungroup() %>% as.data.frame()
+ 
+#Add FBP database missing VW fires: 2 C4, 2 C5
+s.miss0 <- data.frame(num=122:125, 
+                      fire=c('PNFI #1 13 yr ONT',
+                             'PNFI #2 12 yr ONT',
+                             'PNFI RW #1-41-2', 
+                             'Carp Lk PNFI WF QC'),
+                     CFI1=0, Fire.type='S', 
+                     ROS=c(7.6, 4.3, 3, 7.5),
+                     SFC=c(1.6, 0.59, 0.3, 0.9), #only 0.59 was meaasured
+      #Estimated SFC for 3/4 obs: C4 est: 1.64 (BUI 57); C5 est: 0.28 (BUI 25), 0.85 (BUI 45)
+                     CFC=c(0, 1.0, 0, 0), 
+                     Date=c('1977-05-19', '1976-08-04', 
+                            '1976-05-10', '1963-07-03') %>% ymd(),
+      ws=c(19, 10, 18, 25),
+      FFMC=c(91.7, 89.9, 90.4, 90.7), 
+      ISI=c(14.2, 7, 11.2, 16.7), 
+      DMC=c(57, 26, 20, 45), 
+      DC=c(107, 276, 86, 81), 
+      BUI=c(57, 42, 25, 45), 
+      MC.SA_season=c(1, 2, 1, 2), 
+      MC.SA_dens=2, 
+      MC.SA_stand=4, FT='Con') #consider all 4 to be pine stands (conifer type)
 
-#modelling ROS: ws and mcSA
-ros.mcsa <- lm(data=fd.surf2, formula = ROS ~ I(ws^2)+ MC.SA) #MC.SA NS for all trials using MC.SA or MC.FFMC
+#with ISI.mcsa values for the first two C4 PNFI fires
+s.miss <- mutate(rowwise(s.miss0), 
+                 MC.SA=wbmc5(FFMC, DMC, MC.SA_stand, 
+                             MC.SA_dens, MC.SA_season),
+                 isi.m=isi.mcsa(mc=MC.SA, ws=ws)) %>%
+  as.data.frame() 
+  
 
-#ws model
-ros.ws <- lm(data=fd.surf2, ROS ~ I(ws^2)) #not great; can't justify forcing through 0; adj. 
+s.fires2 <- bind_rows(s.fires, s.miss)
 
-#isi alone
-ros.isi <- lm(data=fd.surf2, formula= ROS ~ I(ISI^2)-1)  #best so far! R^2=0.73
-#isi.m alone - most flexible model
-ros.isim <- lm(data=fd.surf2, formula= ROS ~ I(isi.m^2)-1) #not as good but most flexible
+```
 
-ros.isim2 <- lm(data=fd.surf2, formula=ROS ~ dens.fc + I(isi.m^2)-1)
+### [Process - SF models]
 
+```{r label=sROS, echo=FALSE, message=FALSE, warning=FALSE}
+#ROS models 
 
-#ros.isi was the best overall, ros.isim not too bad
-
-
-# ros.nls <- nls(formula= ROS ~ a * isi.m^b - 1, data=fd.surf2, 
-#                start=list(a=1, b=2))
-
-
-#function to predict ROS from isi.m and isi.m ROS model
-rosFunM <- function(ws, mcsa) {
-  isi.m=isi.mcsa(mcsa=mcsa, ws=ws) #get isi.m from mcsa and ws
-  return(predict(ros.isim, newdata=list(isi.m=isi.m)))} #get ROS from isi.m
-
-rosfun.isimodel <- function(isi.m) {
-  predict(ros.isim, newdata=list(isi.m=isi.m))
+#original ccp (2019) sf formula
+sros.st <- function(isi) {
+  0.6308 + 0.056*isi + 0.0086*isi^2
 }
 
-# rosfun.nlsmodel <- function(isi.m) {
-#   predict(ros.nls, newdata=list(isi.m=isi.m))
-# }
+#Original unaltered conifer SF only - excludes D1, PPDF fires
+s.fires.con <- filter(s.fires2, FT!='Decid') 
 
-#looks good - ws ROS graph with isi.m model
-rosgraph.mcsa <- ggplot(fd.surf2, aes(x=ws, y=ROS)) +
-  theme_classic() +
-  geom_point(aes(colour=MC.SA)) +
-  stat_function(fun=rosFunM, args=list(mcsa=7), colour='red') +
-  stat_function(fun=rosFunM, args=list(mcsa=10), colour='orange') +
-  stat_function(fun=rosFunM, args=list(mcsa=14), colour='light green') +
-  scale_colour_gradientn(colours=c('red', 'yellow', 'green', 'blue'), 
-                         breaks=c(7, 9, 11, 13, 15, 17, 19)) +
-  labs(x='ws (km/h)', y='ROS (m/min)',
-    colour='mc_SA')
-  
-#ISI.m graph with obs and model
-rosgraph.m2 <- ggplot(fd.surf2, aes(x=isi.m, y=ROS, 
-                                    shape=as.factor(Site))) +
-  geom_point() +
-  stat_function(fun=rosfun.isimodel)
+#conifer-only isi.m^2 ROS model
+con.lm <- lm(data=s.fires.con, formula=ROS~I(isi.m^2)-1)
+
+#prediction function for simple lm using isi.m
+con.mod <- function(isim) {
+  predict(con.lm, newdata=list(isi.m=isim))
+}
+
+#Noted - fires with some torching seem to be anomalous
+#Exceptions: fires with torching, CFC >1
+except <- filter(s.fires, CFC > 0.1)
+
+#show exceptions, other issues
+ ggplot(s.fires, aes(x=ISI, y=ROS)) + 
+  geom_point() + geom_point(data=except, shape=21, size=4)
+
+#filter out fires with CFC; somewhat anomalous
+#first convert all NA CFC values to 0
+s.fires3 <- s.fires2 %>% 
+  mutate(CFC=ifelse(is.na(CFC), 0, CFC)) %>%
+            filter(CFC <= 0.1)
+
+c7.fullcuring <- 90  #
+fc.cf <- 0.176 +0.02 * (c7.fullcuring-58.8)
+
+s.fires.mod <- s.fires3 %>%
+  mutate(CF=ifelse(Grass.Cure > 58.8, 
+                   0.176+0.02 * (Grass.Cure-58.8), #calc. curing
+                   0.005 * exp(0.061 * Grass.Cure)), #'else' statement for low curing vals
+         ROS=ifelse(is.na(Grass.Cure), ROS,
+                    ROS+ROS*fc.cf*(1/CF)/2)) #actual ROS plus half of 'full curing' ROS if it was all grass
+
+#Graphs - surface fires
+#with isi.m squared model and linear (con.mod) - ***exploratory
+ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+       aes(x=isi.m, y=ROS)) +  
+  geom_point(aes(colour=FT, size=SFC)) +    
+  stat_smooth(method=lm, 
+              formula=y~I(x^2)-1, #same as sros.isim2.mod
+              se=FALSE, colour='black') +    
+#  geom_point(data=s.fires.mod %>% filter(FT=='PDF'), shape=21, size=4) +
+  stat_smooth(data=s.fires.con, method=lm, 
+              formula=y~x-1, se=FALSE, colour='gray')
+#Add dewdrop fires again untransformed
+
+#Shown using ISI ***exploratory
+ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+       aes(x=ISI, y=ROS)) +  
+  geom_point(aes(colour=FT, size=SFC)) +    
+  stat_smooth(method=lm, formula=y~I(x^2)-1, #same as sros.isi2.mod
+              se=FALSE, colour='black') +    
+#  geom_point(data=s.fires.mod %>% filter(FT=='PDF'), shape=21, size=4) +
+  stat_smooth(data=s.fires.con, method=lm, 
+              formula=y~x-1, se=FALSE, colour='gray') 
+
+#So far these models involve - 
+# - Cutting out data with CFC > 1
+# - 'Detrending' PIPO fires to simulate 100% grass curing, half
+# - including substantial percentage of D1 fires
+
+#linear model using ISI^2
+sros.ISI2.mod <- lm(ROS ~ I(ISI^2)-1, data=s.fires.mod)
+#r^2=0.7217 with s.fires3
+#r^2=0.690 with s.fires.mod
+
+#lm using isi.m^2
+sros.isim2.mod <- lm(ROS ~ I(isi.m^2)-1, data=s.fires.mod)
+#r^2=0.708 with s.fires2
+#r^2=0.766 with s.fires.mod
+
+#lm using isi.m AND SFC - best simple model overall
+sros.isim2SFC.mod <- lm(ROS ~ I(isi.m^2) + SFC-1, data=s.fires.mod)
+#r^2=0.749 with s.fires2
+#r^2=0.807 with s.fires.mod
+
+#similar model with ISI (sros.ISI2SFC.mod) is also good, but not as good
+sros.ISI2SFC.mod <- lm(ROS ~ I(ISI^2) + SFC - 1, data=s.fires.mod)
+#r^2=0.7407
+
+#prediction functions
+sf.lin.fun <- function(ws) {
+  predict(sros.lin.mod, newdata=list(ws=ws))
+}
+
+#nls model and prediction function: ax^b format
+sf.axb.isi.mod <- nls(data=s.fires.mod, formula= 
+               ROS ~ a * ISI^b, start=list(a=1, b=2))
+
+sf.axbisi.fun <- function(isi) {
+  predict(sf.axb.isi.mod, newdata=list(ISI=isi))
+}
 
 
-#get predicted vals for isi.m ROS model  
-fd.surf3 <- mutate(fd.surf2, 
-                   pred.isim=rosFunM(ws=ws, mcsa=MC.SA),
-                   MC.SA_dens2=as.factor(MC.SA_dens)) #%>%
-#  filter(ROS < 12)
+#fake data for lines - isim2SFC / IsaSFC model; fros1 is at SFC=1.34, fros2 is at SFC=2
+#also ISI2SFC model and 
+f.sfires0 <- data.frame(fisim=seq(0:30), fsfc1=1.34, fsfc2=2)
+f.sfires <-mutate(rowwise(f.sfires0),
+              fros1=predict(sros.isim2SFC.mod, 
+              newdata=list(isi.m=fisim, SFC=fsfc1)),
+              fros2=predict(sros.isim2SFC.mod, 
+              newdata=list(isi.m=fisim, SFC=fsfc2)))
 
-#larger squares for Dewdrop
-fd.dew <- filter(fd.surf3, num %in% dewdrop)
+#sigmoidal curve like FBP; try c6s to start
+#then vary b and c params
+c6s <- function(isi) {
+  ros=30 * (1-exp(-0.08*isi))^3
+  return(ros)
+}
 
-#pred/obs figure - not used yet
-rosgraph.predObs <- ggplot(fd.surf3, aes(x=pred.isim, y=ROS)) +
-  geom_point(data=fd.dew, shape='square', alpha=0.6, size=3.5) +
-  geom_point(aes(colour=MC.SA, shape=MC.SA_dens2), alpha=0.6, size=2.5) +
+#vw 1993 surface model for c4 immature pine stands
+sf.vw93i <- function(isi) {
+ 20*(1-exp(-0.2*isi))^5 
+}
 
-  geom_abline(intercept=0, slope=1) +
-  theme_classic() +
-  scale_colour_gradientn(colours=c('red', 'yellow', 'green', 'blue'), 
-                         breaks=c(7, 9, 11, 13, 15, 17, 19)) +
-  labs(x='Predicted', y='Observed', colour='mc_SA', shape='Density')
+#vw 1993 surface model for c3 mature pine stands
+sf.vw93m <- function(isi) {
+ 15*(1-exp(-0.05*isi))^2 
+}
 
-#Comparing with CFIS Logit models:
+#D1
+sf.d1 <- function(isi) {
+  30*(1-exp(-0.0232*isi))^1.6 
+}
+
+
+#fit Chapman-Richards function to surface fire data
+#This will be prediction model going forward
+sf.cr.isim <- nls(data=s.fires.mod, formula= 
+               ROS ~ 25 * (1-exp(-b*isi.m))^c, 
+               start=list(b=0.08, c=3))
+
+
+#just need to make a function from the coefficients
+sf.crisim.fun <- function(isi.m) {
+  b=summary(sf.cr.isim)$coefficients[1]
+  c=summary(sf.cr.isim)$coefficients[2]
+  ros=25 * (1-exp(-b*isi.m))^c
+  return(ros)
+}
+
+#Using ISI
+sf.crisi.mod <-nls(data=s.fires.mod, formula= 
+               ROS ~ 25 * (1-exp(-b*ISI))^c, 
+               start=list(b=0.1, c=3))
+
+#CR nls function using ISI
+sf.crisi.fun <- function(isi) {
+  predict(sf.crisi.mod, newdata=list(ISI=isi)) %>% unname()
+}
+
+#Conifer obs only!
+sf.crisiCon.mod <-nls(data=s.fires.mod %>% filter(FT=='Con'), 
+                formula= 
+               ROS ~ 25 * (1-exp(-b*ISI))^c, 
+               start=list(b=0.1, c=3))
+
+sf.crisiCon.fun <- function(isi) {
+  predict(sf.crisiCon.mod, newdata=list(ISI=isi)) %>% unname()
+}
+
+#isi.m
+sf.crisimCon.mod <-nls(data=s.fires.mod %>% filter(FT=='Con'), 
+                formula= 
+               ROS ~ 25 * (1-exp(-b*isi.m))^c, 
+               start=list(b=0.1, c=3))
+
+sf.crisimCon.fun <- function(isim) {
+  predict(sf.crisimCon.mod, newdata=list(isi.m=isim)) %>% unname()
+}
+
+
+
+#Add function for ISI2SFC and ISI.mSFC models
+sf.isi2sfc.fun <- function(isi, sfc) {
+  predict(sros.ISI2SFC.mod, newdata=list(ISI=isi, SFC=sfc)) %>% 
+    unname()
+}
+
+sf.isim2sfc.fun <- function(isim, sfc) {
+  predict(sros.isim2SFC.mod, newdata=list(isi.m=isim, 
+                                          SFC=sfc)) %>%
+    unname()
+}
+
+#SFC=0.75
+sf.isim2sfc075.fun <- function(isim) {
+  predict(sros.isim2SFC.mod, newdata=list(isi.m=isim, 
+                                          SFC=0.75)) %>%
+    unname()
+}
+
 
 
 ```
+
+### [graphs]
+
+```{r label=graphs}
+#more graphs
+#plotted data and best model; 
+#sf.isim2sfc075.fun function doesn't work yet
+sf.isim.graph <- ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+       aes(x=isi.m, y=ROS)) +  
+  geom_point(aes(colour=FT, size=SFC), alpha=0.5) +    
+  geom_point(data=s.fires3 %>% filter(!is.na(SFC)) %>% 
+               filter(FT=='PPDF'), 
+             aes(size=SFC), shape=21, color='darkgray', 
+             fill='darkgray', alpha=0.5) +
+#  geom_line(data=f.sfires, aes(x=fisim, y=fros1), colour='gray')+   
+  stat_function(fun=sf.isim2sfc075.fun, color='red') +
+  stat_function(fun=sf.crisim.fun, color='blue') +
+  geom_text(x=28, y=sf.crisim.fun(28)-2, label='CR_ISI.sa') +
+  geom_text(x=28, y=predict(sros.isim2SFC.mod, 
+            newdata=list(isi.m=28, SFC=1.4))+3, 
+            label='IsaSFC') +
+  theme_classic()
+
+sf.isim.graph
+
+#Graph with vw functions, ISI
+sf.isi.vw.graph <- ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+       aes(x=ISI, y=ROS)) + 
+  geom_point(aes(colour=FT, size=SFC), alpha=0.5) +    
+  geom_point(data=s.fires3 %>% filter(FT=='PPDF'), aes(size=SFC), shape=21, size=4, fill='darkgray', alpha=0.5) +
+  #geom_line(data=f.sfires, aes(x=fisim, y=fros1), colour='gray') + #IsaSFC model
+#  stat_function(fun=sf.axbisi.fun, color='grey') +
+  stat_function(fun=sf.crisi.fun, color='black') +
+  stat_function(fun=sf.crisiCon.fun, color='gray') +  
+  stat_function(fun=sf.vw93i, color='turquoise', linetype='dashed') +
+  stat_function(fun=sf.vw93m, color='purple', linetype='dashed') +
+  stat_function(fun=c6s, color='darkred') +
+  geom_text(x=7, y=sf.vw93i(7)+3, label='VW93i') +
+ # geom_text(x=21, y=c6s(21)-1, label='C6s') +
+  geom_text(x=25, y=sf.crisi.fun(25)+1, label='CR') +
+  geom_text(x=20, y=sf.vw93m(20)-1, label='VW93m') +
+  geom_text(x=26, y=sf.crisiCon.fun(26)-1.5, label='CR_Con')+
+  geom_text(x=15, y=c6s(15)+1.5, label='C6S') +
+  theme_classic()
+
+sf.isi.vw.graph
+
+```
+
+## 1. Introduction
+
+The rate of spread, or rate of forward advance, of a wildfire is recognized as its most important descriptive characteristic for fire managers [@vanwagner1965a]. Fire behaviour in the conifer forests of Canada is often a story about crown fire – high intensity, rapidly spreading fires with flames overtopping the trees and ember spotting ahead of the front [@alexander2016]. And yet in the chronology of fire events, most fire days feature only ground or surface fire behaviour [@wang2014]. Surface fires can be safely and routinely actioned by suppression crews and equipment [@wheatley2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
+
+### Surface fire spread in the Canadian Fire Behavior Prediction System
+
+Surface fire spread models have not been the primary focus of past Canadian fire behaviour modelling efforts. The present Fire Behavior Prediction System (FBPS) features fuel-type specific models encompassing the full range of surface through crown fire behaviour for a small number of conifer fuel complexes [@fcfdg1992; @tymstra2010], an evolution of concepts drafted decades earlier [@VanWagner1973a]. However, more flexible conifer modelling schemes exist that are more specific in terms of the type of fire predicted [@Alexander2006; @perrakis2020; @cfsfiredangergroup2021]. At present, only a limited number of specialized models exist for predicting surface fire behaviour in Canadian vegetation types. For deciduous forests, open (treeless; i.e. grassland) communities, and scattered logging slash, the FBPS has appropriate fuel type models for predicting surface fire spread (i.e., the D-1, O-1 and S-1 through S-3 fuel types). Those models describe fire behaviour in those vegetation complexes based on various empirically-derived spread rate and fuel consumption models [@fcfdg1992]. As with the conifer fuel types, spread rate equations are based on the Chapman-Richards function [@vanwagner1989]:
+
+$ROS=a(1-e^{-b\cdot ISI})^c$ [1],
+
+with the a, b, and c parameters fitted for each fuel type. Newer models have also been developed for grass [@Wotton2009; @kidnie2015] and atlantic shrublands [@pepin2020]. However, the only published empirical models for predicting purely surface fire spread in conifer stands are specialized regression models derived from sparse observations at individual research sites (e.g. Lawson 1972, Quintilio 1977), data that were eventually incorporated into the FBP fuel type functions.
+
+As the FBP System was taking shape, a more flexible and theoretical dual equilibrium conifer crown fire model concept was also proposed that included a function, RSS, representing "all possible surface fires"[@vanwagner1989]. The equation form was initially presented without parameters, but appeared in the FBPS report in the form of the C-6S model, for the surface fire portion of the 'Conifer Plantation' fuel type. The C-6S parameters were presented with no explanation as to their origin: *a*=30, *b*=0.080, *c*=3 [@fcfdg1992]. Two additional RSS equations were published shortly thereafter, associated with immature and mature jack pine stands in Ontario [@vanwagner1993]. For the immature stand, the source of many observations from the C-4 fuel type [@stocks1987], we presently refer to this equation as C-4S: *a*=20, *b*=0.20, *c*=5. For the mature pine stand, associated with C-3 fuel type observations [@stocks1989], we refer to this as C-3S: *a*=15, *b*=0.05, *c*=2. Again, no evidence was presented for the origin of these parameters. Figure 1 compares these notional conifer surface fire ROS models alongside the D-1 model (*a*=30, *b*=0.0232, *c*=1.6).
+
+### [Fig1]
+
+```{r label=Fig1, echo=FALSE, message=FALSE}
+
+fig1 <- ggplot(data=s.fires, aes(x=ISI, y=ROS)) +
+  stat_function(fun=c6s, colour='darkred') +
+  stat_function(fun=sf.vw93i, colour='turquoise') +
+  stat_function(fun=sf.vw93m, colour='purple') +
+  stat_function(fun=sf.d1, colour='green') +
+  theme_classic()
+
+```
+
+### Experimental burning database
+
+The source data for most empirical fire models in Canada, including the FBPS, is a growing database of field-scale experimental burns conducted at various sites across Canada. These data have been previously described and analyzed [e.g., @alexander1990; @cruz1999; @perrakis2023], but never before for the purpose of examining generalized surface fire models. The present database contains over 120 conifer observations of experimental fire behaviour in stands of various sizes, but primarily 0.1-1.0 ha (median size: 0.4 ha). In addition, 32 experimental fire observations were available in deciduous stands, which includes 6 from the northeastern US. Primary sources for these fires include Quintilio et al. [@quintilio1991]
+
+The objective of this study was to use the database of Canadian experimental fires to produce simple and rapid models for estimating the ROS of surface fires burning in generalized conifer stands. Since more intense fires in conifer stands tend to be crown fires, depending on fire weather and moisture and stand structure [@vanwagner1977; @cruz2003; @perrakis2023], the majority of surface fires involve occurred during moderate-level fire danger indices and wind speeds, such as predicted by the Canadian Fire Weather Index (FWI) System. Such models can be used to inform dynamic fire behaviour predictions sytems, where surface fire, crown fire initiation, and crown fire spread are modelled as separate but related processes [@scott2001 ; @perrakis2020; @cfsfiredangergroup2021].
+
+## 2. Methods
+
+#### Fire database
+
+The Canadian experimental fire database was the primary source of surface fire observations. As previously described [@alexander1990, @perrakis2023], varying sizes of square or rectangular plots were ignited from an exposed windward edge using line ignition techniques.
+
+We used the surface fires in our data to fit simple empirical rate of spread (ROS) models based on the fire environment variables. Consistent with the majority of surface fire behaviour models [@sullivan2009], we focussed on wind speed (WS) and dead fuel moisture content (mc) as primary variables of interest. Related weather and moisture predictors tested included open 10 m wind speed (ws10), estimated dead fine fuel moisture content (mc~SA~ or mc~FFMC~), DMC and ISI, in line with FBP System convention [@fcfdg1992; @cfsfiredangergroup2021]. Additional variables related to fuel structure related to crown fire modelling study the list of crown fire predictors were also tested: SFC, FSG, and density (from mc~SA~ categories).
+
+### 
 
 ## 4. Results
 
@@ -230,3 +466,7 @@ In contrast to CFI models, the mc~SA~-based sROS model (using an ISI function ba
 The major limitation of the sROS models and dataset are the paucity of observations at higher danger conditions (ws or ISI) and the aforementioned influence of the GL-A data point. The reconstruction of the Gwatkin Lake wildfire [@vanwagner1965; @hummel1979 ] suggested about 300 m of spread under a tall jack pine stand, scorching the pine crowns 12 m above while torching 'a few trees here and there' [@vanwagner1965], but generally qualifying as a surface fire spreading under 23 km h^-1^ winds. While we assumed that those inputs were reconstructed as accurately as possible, additional surface fire observations under high indices, necessarily with high LCBH and-or low SFC to avoid crowning, will help greatly to improve the accuracy and confidence in the surface ROS model. Some of the variability in the data is undoubtedly due to the varying canopy influence (including edge effects) on in-stand wind speed and turbulence, as previously discussed. These factors, potentially exacerbated by varying plot sizes, are not accounted in our models. The present sROS models appear crude, but will likely provide a useful first approximation decision support tool for fire managers based on real-world fire data. Surface ROS errors of 1-3 m min^-1^ or more should be expected in real-world use.
 
 ## 
+
+## 5. Discussion
+
+Although the most relevant value related to wind velocity might be the mid-flame wind speed (as per [@rothermel1972]), the 10-m open wind speed is commonly measured by Canadian fire managers at several hundred weather stations across the country, and that measure was used in our models. We tested other associated forest structure variables, including canopy closure class, FSG, and ignition line exposure, in order to account for wind reduction between 10-m open conditions and flame-level (\~1 m) sub-canopy conditions.
