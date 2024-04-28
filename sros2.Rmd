@@ -1,24 +1,22 @@
 ---
 title: "Simple models for conifer surface fires"
-author: 
-  D. D. B. Perrakis^[1, 2]^
-  S. W. Taylor^1^
-  date:
-  ^1^ Natural Resources Canada - Canadian Forest Service, 506 West Burnside Road, Victoria, British Columbia, Canada V8P 1Z5; ^2^ Department of Geography, University of Victoria, Victoria, British Columbia, Canada V8P 5C2. 
-output:
-  word_document: 
+author: "D. D. B. Perrakis S. W. Taylor"
+Output:
+  word_document:
     fig_width: 6.3
     fig_height: 6.3
   pdf_document: default
-csl: ecological-applications.csl
-bibliography: references.bib
+output: word_document
+bibliography: 'C:/Dan/Zotero/My library.bib'
+csl: "ecological-applications.csl"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,
-     root.dir = "c:/Dan/_Remote_projects/ccp-sROS/files")
+#ok - references are working; just need to fix all citations! Use the keys found in Zotero, not here
 
-setwd("c:/Dan/_Remote_projects/ccp-sROS/files")
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,root.dir = 'c:/Dan/_Remote_projects/ccp-sROS')
+
+#setwd("c:/Dan/_Remote_projects/ccp-sROS/files")
 
 #.libPaths("C:/Dan/RPackages")
 
@@ -26,13 +24,13 @@ library(tidyverse)
 
 #Get data frame, ready to query 
 #Import data frame
-fd <- read.csv('c:/Dan/_Remote_projects/ccp-sROS/files/fire_data_apr2024.csv')  # with corrected SFC from McRae, Sharp p#16 to sharp.th
+fd <- read.csv('./files/fire_data_apr2024.csv')  # with corrected SFC from McRae, Sharp p#16 to sharp.th
 
-#FWI and moisture functions
-load(file="./wbmc5.rda")
-load(file='./mcF.rda')
-load(file='./ISI.rda')
-load(file='./gr-cf.rda')
+#FWI and moisture functions 
+load(file='./files/wbmc5.rda')
+load(file='./files/mcF.rda')
+load(file='./files/ISI.rda')
+load(file='./files/gr-cf.rda')
 
 #set variables for modelling
 fd4 <- mutate(fd, 
@@ -40,7 +38,7 @@ fd4 <- mutate(fd,
               FSG=FSG1)  #same for FSG
 
 #Deciduous data
-d1 <- read.csv('c:/Dan/_Remote_projects/ccp-sROS/files/fire_data_d1_apr2024.csv')
+d1 <- read.csv('./files/fire_data_d1_apr2024.csv')
 
 #Combine conifer data with D1
 fd.all <- bind_rows(fd4 %>% select(
@@ -149,21 +147,18 @@ sros.st <- function(isi) {
 #Original unaltered conifer SF only - excludes D1, PPDF fires
 s.fires.con <- filter(s.fires2, FT!='Decid') 
 
-#conifer-only isi.m^2 ROS model
-con.lm <- lm(data=s.fires.con, formula=ROS~I(isi.m^2)-1)
+#conifer-only isi.mcsa^2 ROS model
+con.lm.mod <- lm(data=s.fires.con, formula=ROS~I(isi.m^2)-1)
 
 #prediction function for simple lm using isi.m
-con.mod <- function(isim) {
-  predict(con.lm, newdata=list(isi.m=isim))
+sf.con.fun <- function(isim) {
+  predict(con.lm.mod, newdata=list(isi.m=isim))
 }
 
 #Noted - fires with some torching seem to be anomalous
 #Exceptions: fires with torching, CFC >1
-except <- filter(s.fires, CFC > 0.1)
-
-#show exceptions, other issues
- ggplot(s.fires, aes(x=ISI, y=ROS)) + 
-  geom_point() + geom_point(data=except, shape=21, size=4)
+except <- filter(s.fires, CFC > 0.1) %>%
+  mutate(FT='Torch')
 
 #filter out fires with CFC; somewhat anomalous
 #first convert all NA CFC values to 0
@@ -171,17 +166,36 @@ s.fires3 <- s.fires2 %>%
   mutate(CFC=ifelse(is.na(CFC), 0, CFC)) %>%
             filter(CFC <= 0.1)
 
-c7.fullcuring <- 90  #
-fc.cf <- 0.176 +0.02 * (c7.fullcuring-58.8)
+#Curing and C7 fires
+ppdf <- filter(s.fires3, num %in% dewdrop & !is.na(Grass.Cure))
 
+c7.fullcuring <- 90  #
+fc.cf <- gr.cf(c7.fullcuring)
+
+#grass curing function
 s.fires.mod <- s.fires3 %>%
-  mutate(CF=ifelse(Grass.Cure > 58.8, 
-                   0.176+0.02 * (Grass.Cure-58.8), #calc. curing
-                   0.005 * exp(0.061 * Grass.Cure)), #'else' statement for low curing vals
+  mutate(CF=gr.cf(curing=Grass.Cure),
          ROS=ifelse(is.na(Grass.Cure), ROS,
-                    ROS+ROS*fc.cf*(1/CF)/2)) #actual ROS plus half of 'full curing' ROS if it was all grass
+            ROS/2+ROS*fc.cf*(1/CF)/2)) #0.5 actual ROS plus 0.5
+                 #of 'full curing' ROS if it was all grass
 
 #Graphs - surface fires
+
+#show exceptions, other issues
+# ggplot(s.fires, aes(x=ISI, y=ROS)) + 
+#  geom_point() + geom_point(data=except, shape=21, size=4)
+
+#Show data, exceptions (CFC >0.1), PPDF orig. 
+Fig3 <- ggplot(s.fires3 %>% filter(!is.na(SFC)), 
+       aes(x=ISI, y=ROS)) +  
+  geom_point(aes(colour=FT, size=SFC), alpha=0.6) +    
+  geom_point(data=except, aes(colour=FT, size=SFC), shape=22) +
+#  geom_point(data=ppdf, aes(size=SFC), shape=21) +
+  stat_smooth(method=lm, formula=y~I(x^2)-1, #same as sros.isi2.mod
+              se=FALSE, colour='black') +    
+  stat_smooth(data=s.fires.con, method=lm, 
+              formula=y~x-1, se=FALSE, colour='gray') 
+
 #with isi.m squared model and linear (con.mod) - ***exploratory
 ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
        aes(x=isi.m, y=ROS)) +  
@@ -394,7 +408,7 @@ sf.isi.vw.graph
 
 ## 1. Introduction
 
-The rate of spread, or rate of forward advance, of a wildfire is recognized as its most important descriptive characteristic for fire managers [@vanwagner1965a]. Fire behaviour in the conifer forests of Canada is often a story about crown fire – high intensity, rapidly spreading fires with flames overtopping the trees and ember spotting ahead of the front [@alexander2016]. And yet in the chronology of fire events, most fire days feature only ground or surface fire behaviour [@wang2014]. Surface fires can be safely and routinely actioned by suppression crews and equipment [@wheatley2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
+The rate of spread, or rate of forward advance, of a wildfire is recognized as its most important descriptive characteristic for fire managers [@VanWagner1965]. Fire behaviour in the conifer forests of Canada is often a story about crown fire – high intensity, rapidly spreading fires with flames overtopping the trees and ember spotting ahead of the front [@alexanderCrownFireDynamics2016]. And yet in the chronology of fire events, most fire days feature only ground or surface fire behaviour [@Wang.etal2014]. Surface fires can be safely and routinely actioned by suppression crews and equipment [@wheatley2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
 
 ### Surface fire spread in the Canadian Fire Behavior Prediction System
 
@@ -429,7 +443,7 @@ fig1
 
 The source data for most empirical fire models in Canada, including the FBPS, is a growing database of field-scale experimental burns conducted at various sites across Canada. These data have been previously described and analyzed [e.g., @alexander1990; @cruz1999; @perrakis2023], but never before for the purpose of examining generalized surface fire models. The present database contains over 120 conifer observations of experimental fire behaviour in stands of various sizes, but primarily 0.1-1.0 ha (median size: 0.4 ha). In addition, 32 experimental fire observations were available in deciduous stands, which includes 6 from the northeastern US. These are based on experiments described by Van Wagner [-@1973; aspen stands], Alexander and Sando (), and Quintilio et al. [-@quintilio1991].
 
-The objective of this study was to use the database of Canadian experimental fires to produce simple and rapid models for estimating the ROS of surface fires burning in generalized conifer stands. Since fires spreading under higher danger conditions in conifer stands tend to be crown fires, depending on fire environment and stand conditions [@vanwagner1977; @cruz2003; @perrakis2023], the majority of surface fires involve occurred during moderate-level fire danger indices and wind speeds. Such models can be used to inform dynamic fire behaviour predictions sytems, where surface fire, crown fire initiation, and crown fire spread are modelled as separate but related processes [@scott2001 ; @perrakis2020; @cfsfiredangergroup2021].
+The objective of this study was to use the database of Canadian experimental fires to produce simple and rapid models for estimating the ROS of surface fires burning in generalized conifer stands. Since fires spreading under higher danger conditions in conifer stands tend to be crown fires [@vanwagner1977; @beverly2020; @cruz2022], the majority of surface fires involve occurred during moderate-level fire danger indices and wind speeds. Such models can be used to inform dynamic fire behaviour predictions sytems, where surface fire, crown fire initiation, and crown fire spread are modelled as separate but related processes [@scott2001 ; @perrakis2020; @cfsfiredangergroup2021].
 
 ## 2. Methods
 
@@ -437,7 +451,7 @@ The objective of this study was to use the database of Canadian experimental fir
 
 The Canadian experimental fire database was the primary source of surface fire observations. As previously described [@alexander1990, @perrakis2023], varying sizes of square or rectangular plots were ignited from an exposed windward edge using line ignition techniques.
 
-We used the surface fires in our data to fit simple empirical rate of spread (ROS) models based on the fire environment variables. Consistent with the majority of surface fire behaviour models [@sullivan2009], we focussed on wind speed (WS) and dead fuel moisture content (mc) as primary variables of interest. Related weather and moisture predictors tested included open 10 m wind speed (*WS10*), estimated dead fine fuel moisture content, and the Initial Spread Index (ISI), in line with the Fire Weather Index (FWI) and FBP System conventions [@fcfdg1992; @cfsfiredangergroup2021]. Fine dead fuel moisture was estimated from the Fine Fuel Moisture Code (FFMC) component of the FWI, as well as from Wotton and Beverly's [@wotton2007] stand-adjusted moisture content (mcSA). Variables including fuel type and plot width were also examined.
+We used the surface fires in our data to fit simple empirical rate of spread (ROS) models based on the fire environment variables. Consistent with the majority of surface fire behaviour models [@sullivan2009], we focused on wind speed (WS) and dead fuel moisture content (mc) as primary variables of interest. Related weather and moisture predictors tested included open 10 m wind speed (WS~10~), estimated dead fine fuel moisture content, and the Initial Spread Index (ISI), in line with the Fire Weather Index (FWI) and FBP System conventions [@fcfdg1992; @cfsfiredangergroup2021]. Fine dead fuel moisture was estimated from the Fine Fuel Moisture Code (FFMC) component of the FWI, as well as from Wotton and Beverly's [@wotton2007] stand-adjusted moisture content (mcSA). Variables including fuel type and plot width were also examined.
 
 ### 
 
@@ -447,18 +461,18 @@ We used the surface fires in our data to fit simple empirical rate of spread (RO
 
 Our database of `r nrow(fd.all)` observations resulted in `r nrow(filter(fd.all, CFI1==1))` crown fires and 92 surface fires. Among `r nrow(fd.all)-nrow(d1)` fires in conifer fuel types, a clear relationship is evident between fire type and rate of spread predicted by wind speed (Fig. 2).
 
-[Fig 2 simple ROS graph by fire type]
+### [Fig 2 simple ROS graph by fire type]
 
 ```{r label=Fig2}
 #Call all 'midstory passive crown fires' surface fires if
 #CFC is less than 0.1
 fd.ros <- mutate(fd4,
-                 FT2=case_when(
+                 FiT2=case_when(
                    Fire.type=='PCM' & CFC < 0.1 ~ 'S',
                    Fire.type=='PCM' & CFC >= 0.1 ~ 'PC',
                    TRUE ~ Fire.type))
                  
-ggplot(fd.ros, aes(x=ws, y=ROS, colour=FT2))+
+ggplot(fd.ros, aes(x=ws, y=ROS, colour=FiT2))+
   geom_point(alpha=0.7)+
   xlim(0, 35)+
   scale_colour_manual(values=c('red', 'orange', 'green')) +
@@ -466,21 +480,27 @@ ggplot(fd.ros, aes(x=ws, y=ROS, colour=FT2))+
   theme_classic()
 
 #simple linear sROS model from graph:
-sf.lin <- lm(ROS ~ ws, data=fd.ros %>% filter(FT2=='S'))
+sf.lin <- lm(ROS ~ ws, data=fd.ros %>% filter(FiT2=='S'))
 
 ```
 
-Surface fire ROS in conifer stands ranged from `r min(fd.ros$ROS)` – `r max(fd.ros %>% filter(FT2=='S') %>% pull(ROS)` m min^-1^, with most fires' sROS values well below the maximum (95th percentile sROS of 4.0 m min^-1^.). The linear trend shown in Fig 2 represents a very simple baseline linear surface ROS model:
+Surface fire ROS in conifer stands ranged from `r min(fd.ros$ROS)` – `r max(fd.ros %>% filter(FiT2=='S') %>% pull(ROS))` m min^-1^, with most fires' sROS values well below the maximum (95th percentile sROS of 4.0 m min^-1^.). The linear trend shown in Fig 2 (green line) represents a very simple baseline linear surface ROS model:
 
 $$ROS=-0.16666 + 0.19319 \cdot WS_{10}$$
 
-with adjusted *R^2^* =0.198. We then calculated an alternative spread index, the stand-adjusted ISI (*ISI~SA~*), using the same ISI formulation as originally described by Van Wagner [-@vanwagner1987], substituting the mc~SA~ value instead of the mc~FFMC~. The full equation is provided for clarity:
+with adjusted *R^2^* =0.198.
+
+Figure 3 shows surface fire observations classified by fuel type and surface fuel consumption level. Despite identifying these fires as surface fires in primary sources, a few observations appeared anomalous, particularly those with significant estimated levels of canopy fuel consumption (CFC). Fires with estimated CFC \> 0.1 (mean CFC: 0.35 kg m\^2) were then removed from the surface model-fitting. Other questionable inclusions included fires in open Ponderosa pine / Douglas-fir stands, with partly cured understory grass [@nyberg1979; see Box 1] as well as fires observations in deciduous stands.
+
+```{r label=Fig3}
+Fig3
+```
+
+We then calculated an alternative spread index, the stand-adjusted ISI (ISI~SA~), using the same ISI formulation as originally described by Van Wagner [-@vanwagner1987], substituting the mc~SA~ value instead of the mc~FFMC~. The full equation is provided for clarity:
 
 $$
-ISI_{SA}=0.208\cdot [e^{0.05039\cdot w}] \cdot (91.9 \cdot e^{-0.1386\cdot m}) \cdot \left[ 1+\frac{m^{5.31}}{(4.93\cdot 10^7)}) \right] 
-$$
-
-[5], with *w* and *m* representing wind speed and mc~SA~ in this case, respectively. Testing various models of wind speed, ISI, and ISISA produced the following models [table: ]
+ISI_{SA}=0.208\cdot [e^{0.05039\cdot WS_{10}}] \cdot (91.9 \cdot e^{-0.1386\cdot mc}) \cdot \left[ 1+\frac{mc^{5.31}}{(4.93\cdot 10^7)}) \right] 
+$$ , [5], with *mc* representing mc~SA~. Testing various models of wind speed, ISI, and ISI~SA~ produced the following models [table: ]
 
 $$ROS=0.02249 \cdot ISI_{SA} ^2$$ [6], ##fix
 
