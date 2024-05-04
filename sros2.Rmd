@@ -191,32 +191,33 @@ Fig3 <- ggplot(s.fires3 %>% filter(!is.na(SFC)),
   geom_point(aes(colour=FT, size=SFC), alpha=0.6) +    
   geom_point(data=except, aes(colour=FT, size=SFC), shape=22) +
 #  geom_point(data=ppdf, aes(size=SFC), shape=21) +
-  stat_smooth(method=lm, formula=y~I(x^2)-1, #same as sros.isi2.mod
+  stat_smooth(data=s.fires.con, method=lm, formula=y~I(x^2)-1, #same as sros.isi2.mod
               se=FALSE, colour='black') +    
   stat_smooth(data=s.fires.con, method=lm, 
-              formula=y~x-1, se=FALSE, colour='gray') 
+              formula=y~x-1, se=FALSE, colour='gray') +
+  theme_classic()
 
 #with isi.m squared model and linear (con.mod) - ***exploratory
-ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
-       aes(x=isi.m, y=ROS)) +  
-  geom_point(aes(colour=FT, size=SFC)) +    
-  stat_smooth(method=lm, 
-              formula=y~I(x^2)-1, #same as sros.isim2.mod
-              se=FALSE, colour='black') +    
+#ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+#       aes(x=isi.m, y=ROS)) +  
+#  geom_point(aes(colour=FT, size=SFC)) +    
+#  stat_smooth(method=lm, 
+#             formula=y~I(x^2)-1, #same as sros.isim2.mod
+#              se=FALSE, colour='black') +    
 #  geom_point(data=s.fires.mod %>% filter(FT=='PDF'), shape=21, size=4) +
-  stat_smooth(data=s.fires.con, method=lm, 
-              formula=y~x-1, se=FALSE, colour='gray')
+#  stat_smooth(data=s.fires.con, method=lm, 
+#              formula=y~x-1, se=FALSE, colour='gray')
 #Add dewdrop fires again untransformed
 
 #Shown using ISI ***exploratory
-ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
-       aes(x=ISI, y=ROS)) +  
-  geom_point(aes(colour=FT, size=SFC)) +    
-  stat_smooth(method=lm, formula=y~I(x^2)-1, #same as sros.isi2.mod
-              se=FALSE, colour='black') +    
+#ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+#       aes(x=ISI, y=ROS)) +  
+#  geom_point(aes(colour=FT, size=SFC)) +    
+#  stat_smooth(method=lm, formula=y~I(x^2)-1, #same as sros.isi2.mod
+#              se=FALSE, colour='black') +    
 #  geom_point(data=s.fires.mod %>% filter(FT=='PDF'), shape=21, size=4) +
-  stat_smooth(data=s.fires.con, method=lm, 
-              formula=y~x-1, se=FALSE, colour='gray') 
+#  stat_smooth(data=s.fires.con, method=lm, 
+#              formula=y~x-1, se=FALSE, colour='gray') 
 
 #So far these models involve - 
 # - Cutting out data with CFC > 1
@@ -354,13 +355,20 @@ sf.isim2sfc075.fun <- function(isim) {
     unname()
 }
 
+sf.isim2sfc075.2 <- function(isim) {
+  a=summary(sros.isim2SFC.mod)$coefficients[1]
+  b=summary(sros.isim2SFC.mod)$coefficients[2]
+  sfc=0.75
+  return(a*isim^2 + b*sfc)
+}
+#Maybe ask Perplexity how to make 'predict' work for stat_function?
 
 
 ```
 
 ### [graphs]
 
-```{r label=graphs}
+```{r label=graphs, echo=FALSE}
 #more graphs
 #plotted data and best model; 
 #sf.isim2sfc075.fun function doesn't work yet
@@ -371,13 +379,13 @@ sf.isim.graph <- ggplot(s.fires.mod %>% filter(!is.na(SFC)),
                filter(FT=='PPDF'), 
              aes(size=SFC), shape=21, color='darkgray', 
              fill='darkgray', alpha=0.5) +
-#  geom_line(data=f.sfires, aes(x=fisim, y=fros1), colour='gray')+   
-  stat_function(fun=sf.isim2sfc075.fun, color='red') +
+#  geom_line(data=f.sfires, aes(x=fisim, y=fros1), colour='gray')+
+  stat_function(fun=predict(sros.isim2SFC.mod), 
+                            args=list(SFC=0.75), color='red') +
   stat_function(fun=sf.crisim.fun, color='blue') +
   geom_text(x=28, y=sf.crisim.fun(28)-2, label='CR_ISI.sa') +
-  geom_text(x=28, y=predict(sros.isim2SFC.mod, 
-            newdata=list(isi.m=28, SFC=1.4))+3, 
-            label='IsaSFC') +
+  #geom_text(x=28, y=sf.isim2sfc075.fun(28)+3, 
+  #          label='IsaSFC') +
   theme_classic()
 
 sf.isim.graph
@@ -408,17 +416,17 @@ sf.isi.vw.graph
 
 ## 1. Introduction
 
-The rate of spread, or rate of forward advance, of a wildfire is recognized as its most important descriptive characteristic for fire managers [@VanWagner1965]. Fire behaviour in the conifer forests of Canada is often a story about crown fire – high intensity, rapidly spreading fires with flames overtopping the trees and ember spotting ahead of the front [@alexanderCrownFireDynamics2016]. And yet in the chronology of fire events, most fire days feature only ground or surface fire behaviour [@Wang.etal2014]. Surface fires can be safely and routinely actioned by suppression crews and equipment [@wheatley2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
+The rate of spread, or rate of forward advance, of a wildfire is recognized as its most important descriptive characteristic for fire managers [@VanWagner1965]. Fire behaviour in the conifer forests of Canada is often a story about crown fire – high intensity, rapidly spreading fires with flames overtopping the trees and ember spotting ahead of the front [@alexanderCrownFireDynamics2016]. And yet in the chronology of fire events, most fire days feature only ground or surface fire behaviour [@Wang.etal2014]. Surface fires can be safely and routinely actioned by suppression crews and equipment [@Wheatley.etal2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
 
 ### Surface fire spread in the Canadian Fire Behavior Prediction System
 
-Surface fire spread models have not been the primary focus of past Canadian fire behaviour modelling efforts. The present Fire Behavior Prediction System (FBPS) features fuel-type specific models encompassing the full range of surface through crown fire behaviour for a small number of conifer fuel complexes [@fcfdg1992; @tymstra2010], an evolution of concepts drafted decades earlier [@VanWagner1973a]. However, more recent and flexible conifer modelling schemes exist that are specific in terms of the type of fire predicted under given weather and moisture inputs; these include CFIS (Crown Fire Initiation and Spread), Conifer Pyrometrics, and the forthcoming 'next generation' Fire Behavior Prediction System [@Alexander2006; @perrakis2020; @cfsfiredangergroup2021]. At present, only a limited number of specialized models exist for predicting surface fire behaviour in Canadian vegetation types. For deciduous forests, open (treeless; i.e. grassland) communities, and scattered logging slash, the FBPS has appropriate fuel type models for predicting surface fire spread (i.e., the D-1, O-1 and S-1 through S-3 fuel types). Those models describe fire behaviour based on empirically-derived spread rate and fuel consumption models [@fcfdg1992]. As with the conifer fuel types, spread rate equations are based on the Chapman-Richards function [@vanwagner1989]:
+Surface fire spread models have not been the primary focus of past Canadian fire behaviour modelling efforts. The present Fire Behavior Prediction System (FBPS) features fuel-type specific models encompassing the full range of surface through crown fire behaviour for a small number of conifer fuel complexes [@ForestryCanadaFireDangerGroup1992; @Tymstra.etal2010]. Thus, the majority of conifer ROS models do not discriminate between surface and crown fire behaviour but rather assume a gradual transition between fire types; a deliberate decision discussed by Van Wagner [-@VanWagner1989]. However, more recent and flexible conifer modelling schemes exist that are specific in terms of the type of fire predicted under given weather and moisture inputs; these include CFIS (Crown Fire Initiation and Spread), Conifer Pyrometrics, and the forthcoming 'next generation' Fire Behavior Prediction System [@Alexander2006; @perrakis2020; @cfsfiredangergroup2021]; these models beg the question of what to expect (ROS, fire intensity, etc.) if crown fire behaviour is not predicted to occur. Pure surface fire models do exist in the FBPS for fuel complexes that do not exhibit crown fire behaviour: deciduous forests, open (treeless; i.e. grassland) communities, and scattered logging slash, in the form of the D-1, O-1 and slash (S-1 through S-3) fuel types, respectively [@ForestryCanadaFireDangerGroup1992]. As with the conifer fuel types, spread rate equations for surface fire are based on the Chapman-Richards function [@VanWagner1989]:
 
 $ROS=a(1-e^{-b\cdot ISI})^c$ [1],
 
-with the a, b, and c parameters fitted for each fuel type. Newer models have also been developed for grass [@Wotton2009; @kidnie2015] and atlantic shrublands [@pepin2020]. However, the only published empirical models for predicting purely surface fire spread in conifer stands are specialized regression models derived from sparse observations at individual research sites (e.g. Lawson 1972, Quintilio 1977), data that were eventually incorporated into the FBP fuel type functions.
+with the a, b, and c parameters fitted for each fuel type. Newer models have also been developed for grass [@Wotton2009; @Kidnie.Wotton2015] and atlantic shrublands [@Pepin.Wotton2020]. A few models were previously published for predicting surface fire spread in conifer stands based on sparse observations at individual research sites [e.g., @Lawson1972], but these data were eventually incorporated into the broader-scope FBP fuel type functions.
 
-As the FBP System was taking shape, a more flexible and theoretical dual equilibrium conifer crown fire model concept was also proposed that included a function, RSS, representing "all possible surface fires"[@vanwagner1989]. Suggested parameters for this function appeared in the FBPS report in the form of the C-6S model, for the surface fire portion of the 'Conifer Plantation' fuel type; no explanation as to their origin: *a*=30, *b*=0.080, *c*=3 [@fcfdg1992]. Two additional RSS equations were published shortly thereafter, associated with immature and mature jack pine stands in Ontario [@vanwagner1993]. For the immature stand, the source of many observations from the C-4 fuel type [@stocks1987], we presently refer to this equation as C-4S: *a*=20, *b*=0.20, *c*=5. For the mature pine stand, associated with C-3 fuel type observations [@stocks1989], we refer to this as C-3S: *a*=15, *b*=0.05, *c*=2. Again, no evidence was presented for the origin of these parameters. Figure 1 compares these notional conifer surface fire ROS models alongside the D-1 model (*a*=30, *b*=0.0232, *c*=1.6).
+As the FBP System was taking shape, a more flexible and theoretical dual equilibrium conifer crown fire model concept was also proposed that included a function, RSS, representing "all possible surface fires"[@VanWagner1989]. Suggested parameters for this function appeared in the FBPS report in the form of the C-6S model, for the surface fire portion of the 'Conifer Plantation' fuel type; no explanation was provided as to their origin: *a*=30, *b*=0.080, *c*=3 [@ForestryCanadaFireDangerGroup1992]. Two additional RSS equations were published shortly thereafter, associated surface fire spread in immature and mature jack pine stands in Ontario [@VanWagner1993]. The immature stand was the source of many observations from the C-4 fuel type [@Stocks1987] and we presently refer to this RSS equation as C-4S, with the following parameters: *a*=20, *b*=0.20, *c*=5. The mature pine stand RSS model is associated with C-3 fuel type observations [@Stocks1989] and will be called C-3S: *a*=15, *b*=0.05, *c*=2. Again, no evidence was presented for the origin of these parameters. Figure 1 compares these notional conifer surface fire ROS models along with the D-1 model for comparison (*a*=30, *b*=0.0232, *c*=1.6).
 
 ### [Fig1]
 
@@ -441,17 +449,17 @@ fig1
 
 ### Experimental burning database
 
-The source data for most empirical fire models in Canada, including the FBPS, is a growing database of field-scale experimental burns conducted at various sites across Canada. These data have been previously described and analyzed [e.g., @alexander1990; @cruz1999; @perrakis2023], but never before for the purpose of examining generalized surface fire models. The present database contains over 120 conifer observations of experimental fire behaviour in stands of various sizes, but primarily 0.1-1.0 ha (median size: 0.4 ha). In addition, 32 experimental fire observations were available in deciduous stands, which includes 6 from the northeastern US. These are based on experiments described by Van Wagner [-@1973; aspen stands], Alexander and Sando (), and Quintilio et al. [-@quintilio1991].
+The source data for much of the FBPS, including the models described above, is a growing database of field-scale experimental burns conducted at various sites across Canada. These data have been previously described and analyzed [e.g., @Alexander.Quintilio1990; @cruz1999; @perrakis2023], but never before for the purpose of examining generalized surface fire models. The present database contains over 120 conifer observations of experimental fire behaviour in stands of various sizes, but primarily 0.1-1.0 ha (median size: 0.4 ha). In addition, 32 experimental fire observations were available in deciduous stands, based on original studies described by Van Wagner [-@VanWagner1973a; aspen stands], Alexander and Sando [@Alexander.Sando1989], and Quintilio et al. [-@quintilio1991].
 
-The objective of this study was to use the database of Canadian experimental fires to produce simple and rapid models for estimating the ROS of surface fires burning in generalized conifer stands. Since fires spreading under higher danger conditions in conifer stands tend to be crown fires [@vanwagner1977; @beverly2020; @cruz2022], the majority of surface fires involve occurred during moderate-level fire danger indices and wind speeds. Such models can be used to inform dynamic fire behaviour predictions sytems, where surface fire, crown fire initiation, and crown fire spread are modelled as separate but related processes [@scott2001 ; @perrakis2020; @cfsfiredangergroup2021].
+The objective of this study was to use the database of experimental fires to produce simple and rapid models for estimating the ROS of surface fires burning in generalized conifer stands. Since fires spreading under higher danger conditions in conifer stands tend to be crown fires [@vanwagner1977a; @Beverly.etal2020; @Cruz.etal2022], the majority of surface fires involve occurred during moderate-level fire danger indices and wind speeds, or under high danger conditions in stands with high crown base height (\> 6 m) in a few cases. Such models can be used to inform dynamic fire behaviour predictions sytems, where surface fire, crown fire initiation, and crown fire spread are modelled as separate but related processes [@Scott.Reinhardt2001 ; @perrakis2020a; @CFSFireDangerGroup2021].
 
 ## 2. Methods
 
 #### Fire database
 
-The Canadian experimental fire database was the primary source of surface fire observations. As previously described [@alexander1990, @perrakis2023], varying sizes of square or rectangular plots were ignited from an exposed windward edge using line ignition techniques.
+The Canadian experimental fire database was the primary source of surface fire observations. As previously described, varying sizes of square or rectangular plots were ignited from an exposed windward edge using line ignition techniques.
 
-We used the surface fires in our data to fit simple empirical rate of spread (ROS) models based on the fire environment variables. Consistent with the majority of surface fire behaviour models [@sullivan2009], we focused on wind speed (WS) and dead fuel moisture content (mc) as primary variables of interest. Related weather and moisture predictors tested included open 10 m wind speed (WS~10~), estimated dead fine fuel moisture content, and the Initial Spread Index (ISI), in line with the Fire Weather Index (FWI) and FBP System conventions [@fcfdg1992; @cfsfiredangergroup2021]. Fine dead fuel moisture was estimated from the Fine Fuel Moisture Code (FFMC) component of the FWI, as well as from Wotton and Beverly's [@wotton2007] stand-adjusted moisture content (mcSA). Variables including fuel type and plot width were also examined.
+We used the surface fires in our data to fit simple empirical rate of spread (ROS) models based on the fire environment variables. Consistent with the majority of empirical surface fire behaviour models [@Sullivan2009a], we focused on wind speed (WS) and dead fuel moisture content (mc) as primary variables of interest. Related weather and moisture predictors tested included open 10 m wind speed (WS~10~), estimated dead fine fuel moisture content, and the Initial Spread Index (ISI) that combines these two factors according to the Fire Weather Index (FWI) and FBP System conventions [@fcfdg1992; @cfsfiredangergroup2021]. Fine dead fuel moisture was estimated from the Fine Fuel Moisture Code (FFMC) component of the FWI, as well as from Wotton and Beverly's [@wotton2007] stand-adjusted moisture content (mcSA). Variables including fuel type and plot width were also examined.
 
 ### 
 
@@ -490,21 +498,25 @@ $$ROS=-0.16666 + 0.19319 \cdot WS_{10}$$
 
 with adjusted *R^2^* =0.198.
 
-Figure 3 shows surface fire observations classified by fuel type and surface fuel consumption level. Despite identifying these fires as surface fires in primary sources, a few observations appeared anomalous, particularly those with significant estimated levels of canopy fuel consumption (CFC). Fires with estimated CFC \> 0.1 (mean CFC: 0.35 kg m\^2) were then removed from the surface model-fitting. Other questionable inclusions included fires in open Ponderosa pine / Douglas-fir stands, with partly cured understory grass [@nyberg1979; see Box 1] as well as fires observations in deciduous stands.
+Figure 3 represents surface fire observations classified by fuel type and surface fuel consumption level. Despite identifying these fires as surface fires in primary sources, a few observations appeared anomalous, particularly those with significant estimated levels of canopy fuel consumption (CFC). Fires with estimated CFC \> 0.1 (mean CFC: 0.35 kg m\^2) were then removed from the surface model-fitting. Other questionable inclusions included fires in open Ponderosa pine / Douglas-fir stands, with partly cured understory grass [@nyberg1979; see Box 1] as well as fires observations in deciduous stands.
+
+### [Fig3]
 
 ```{r label=Fig3}
 Fig3
 ```
 
-We then calculated an alternative spread index, the stand-adjusted ISI (ISI~SA~), using the same ISI formulation as originally described by Van Wagner [-@vanwagner1987], substituting the mc~SA~ value instead of the mc~FFMC~. The full equation is provided for clarity:
+We then calculated an alternative spread index based on the Wotton and Beverly [-@Wotton.Beverly2007] stand-adjusted moisture content estimate (mc~SA~), but in the same form as the ISI, combining wind and fuel moisture effects: the stand-adjusted ISI (ISI~SA~). The ISI~SA~ involved the same ISI formulation as originally described by Van Wagner [-@vanwagner1987], but substituting the mc~SA~ value instead of the mc~FFMC~. The full equation is provided for clarity:
 
 $$
 ISI_{SA}=0.208\cdot [e^{0.05039\cdot WS_{10}}] \cdot (91.9 \cdot e^{-0.1386\cdot mc}) \cdot \left[ 1+\frac{mc^{5.31}}{(4.93\cdot 10^7)}) \right] 
-$$ , [5], with *mc* representing mc~SA~. Testing various models of wind speed, ISI, and ISI~SA~ produced the following models [table: ]
+$$ , [5], with *mc* representing mc~SA~ in this case. After testing various models of wind speed, ISI, and ISI~SA~ , the following models were produced [table: ]
 
 $$ROS=0.02249 \cdot ISI_{SA} ^2$$ [6], ##fix
 
-with adjusted r^2^ =0.689 ##fix. Figure 5 shows the surface ROS observations plotted against wind speed, along with the Equation 5 sROS model at three estimated moisture content levels. Calculation of Cook's Distance (D~c~) identified one observation as particularly influential in the regression - the fastest sROS observation in the dataset, with D~c~= 0.530. This observation represented the initial surface fire under jack pine in the Gwatkin Lake wildfire ('GL-A'). Although it appears unduly influential, deleting this observation and refitting Equation 6 produced a model (Equation 6') with an only marginally altered slope coefficient (0.02097). Comparing the two models, Equation 6 predicts ROS for the GL-A observation (ws = 23.0, mc~SA~=7.22) of 11.3 m min^-1^, an underprediction of 5.8 % compared to observed ROS (12.0 m min^-1^); in contrast, Equation 6' predicts ROS of 10.5 m min^-1^, 0.8 m min^-1^ lower than the Equation 6 result.
+with adjusted r^2^ =0.689 ##fix.
+
+Figure 5 shows the surface ROS observations plotted against wind speed, along with the Equation 5 sROS model at three estimated moisture content levels. Calculation of Cook's Distance (D~c~) identified one observation as particularly influential in the regression - the fastest sROS observation in the dataset, with D~c~= 0.530. This observation represented the initial surface fire under jack pine in the Gwatkin Lake wildfire ('GL-A'). Although it appears unduly influential, deleting this observation and refitting Equation 6 produced a model (Equation 6') with an only marginally altered slope coefficient (0.02097). Comparing the two models, Equation 6 predicts ROS for the GL-A observation (ws = 23.0, mc~SA~=7.22) of 11.3 m min^-1^, an underprediction of 5.8 % compared to observed ROS (12.0 m min^-1^); in contrast, Equation 6' predicts ROS of 10.5 m min^-1^, 0.8 m min^-1^ lower than the Equation 6 result.
 
 #### Surface rate of spread
 
@@ -517,3 +529,5 @@ The major limitation of the sROS models and dataset are the paucity of observati
 ## 5. Discussion
 
 Although the most relevant value related to wind velocity might be the mid-flame wind speed (as per [@rothermel1972]), the 10-m open wind speed is commonly measured by Canadian fire managers at several hundred weather stations across the country, and that measure was used in our models. We tested other associated forest structure variables, including canopy closure class, FSG, and ignition line exposure, in order to account for wind reduction between 10-m open conditions and flame-level (\~1 m) sub-canopy conditions.
+
+While physical fire spread models attempt to represent heat transfer and combustion processes, empirical and
