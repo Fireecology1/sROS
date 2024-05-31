@@ -1,11 +1,11 @@
-"","Call","Fit.criteria.Min.max.accuracy","Fit.criteria.MAE","Fit.criteria.MedAE","Fit.criteria.MAPE","Fit.criteria.MSE","Fit.criteria.RMSE","Fit.criteria.NRMSE.mean","Fit.criteria.NRMSE.median","Fit.criteria.Efron.r.squared","Fit.criteria.CV.prcnt"
-"1","lm(formula = ROS ~ I(isi.m^2) - 1, data = s.fires.con)",0.521,1.26,0.804,0.631,3.36,1.83,0.906,1.24,0.136,90.6
-"2","lm(formula = ROS ~ I(ISI^2) - 1, data = s.fires.mod)",0.576,1.15,0.643,0.561,2.94,1.71,0.782,1.14,0.385,78.2
-"3","lm(formula = ROS ~ I(ISI^2) + SFC - 1, data = s.fires.mod)",0.656,1.03,0.607,0.61,2.41,1.55,0.709,1.04,0.515,70.9
-"4","lm(formula = ROS ~ I(isi.m^2) - 1, data = s.fires.mod)",0.583,1.05,0.719,0.559,2.21,1.49,0.679,0.992,0.536,67.9
-"5","lm(formula = ROS ~ I(isi.m^2) + SFC - 1, data = s.fires.mod)",0.657,0.937,0.622,0.547,1.84,1.36,0.619,0.904,0.631,61.9
-"6","nls(formula = ROS ~ 25 * (1 - exp(-b * ISI))^c, data = s.fires.mod, ",0.609,1.11,0.807,0.7,2.45,1.56,0.714,1.04,0.487,71.4
-"7","nls(formula = ROS ~ 25 * (1 - exp(-b * isi.m))^c, data = s.fires.mod, ",0.609,1.05,0.851,0.65,2.18,1.48,0.692,0.985,0.527,69.2
-"8","nls(formula = ROS ~ a * ISI^b, data = s.fires.mod, start = list(a = 1, ",0.61,1.12,0.818,0.716,2.46,1.57,0.716,1.05,0.485,71.6
-"9","nls(formula = ROS ~ 25 * (1 - exp(-b * ISI))^c, data = s.fires.mod %>% ",0.575,0.779,0.54,0.599,0.961,0.98,0.521,0.817,0.781,52.1
-"10","nls(formula = ROS ~ 25 * (1 - exp(-b * isi.m))^c, data = s.fires.mod %>% ",0.547,0.854,0.748,0.646,1.18,1.08,0.577,0.904,0.732,57.7
+"","Model","nobs","efron.r2","AIC"
+"1","isim2.con",56,0.774896281836155,199.798864765536
+"2","ISI2.agg",90,0.695859490464528,351.723996340261
+"3","ISI2SFC.agg",82,0.756203440336806,306.183798313554
+"4","isim2.agg",90,0.763121156333536,329.229306810278
+"5","isim2SFC.agg",82,0.80728637787344,286.903233280269
+"6","crisi.agg",90,0.74207775828478,338.889148177879
+"7","crisim.agg",90,0.773523402430576,327.187660190013
+"8","axb.isi.agg",90,0.741432051771628,339.114180976533
+"9","crisi.con",50,0.874937462326925,143.578292284899
+"10","crisim.con",50,0.858252774410754,149.839865098688
