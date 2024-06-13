@@ -132,15 +132,6 @@ s.miss <- mutate(rowwise(s.miss0),
 
 s.fires2 <- bind_rows(s.fires, s.miss)
 
-#calculate my own r2 function
-r2nls <- function(model){
-  RSS=sum(residuals(model)^2)
-  augmod=broom::augment(model)
-  TSS=sum(augmod$ROS^2)
-  r2=1-(RSS/TSS)
-  return(r2)
-}
-
 
 ```
 
@@ -194,11 +185,6 @@ s.fires.mod <- s.fires3 %>%
             ROS/2+ROS*fc.cf*(1/CF)/2)) #0.5 actual ROS plus 0.5
                  #of 'full curing' ROS if it was all grass
 
-#show exceptions, other issues
-# ggplot(s.fires, aes(x=ISI, y=ROS)) + 
-#  geom_point() + geom_point(data=except, shape=21, size=4)
-
-
 #So far these models involve - 
 # - Cutting out data with CFC > 1
 # - 'Detrending' PIPO fires to simulate 100% grass curing, half
@@ -215,14 +201,16 @@ sros.isim2.mod <- lm(ROS ~ I(isi.m^2)-1, data=s.fires.mod)
 #r^2=0.7605 with s.fires.mod
 
 #lm using isi.m AND SFC - best simple model overall
-sros.isim2SFC.mod <- lm(ROS ~ I(isi.m^2) + SFC-1, data=s.fires.mod)
+sros.isim2SFC.mod <- lm(ROS ~ I(isi.m^2) + sqrt(SFC)-1, 
+                        data=s.fires.mod)
 #r^2=0.75 with s.fires2
 #r^2=0.8025 with s.fires.mod
 #r^2=0.617 with s.fires.con
 
 
 #similar model with ISI (sros.ISI2SFC.mod) is also good, but not as good
-sros.ISI2SFC.mod <- lm(ROS ~ I(ISI^2) + SFC - 1, data=s.fires.mod)
+sros.ISI2SFC.mod <- lm(ROS ~ I(ISI^2) + sqrt(SFC) - 1, 
+                       data=s.fires.mod)
 #r^2=0.7501
 
 #prediction functions
@@ -347,116 +335,47 @@ sf.isim2sfc3.fun <- function(isim) {
           newdata=list(isi.m=isim, SFC=sfc_vals))
 }
 
-#Fernandes sf model
+#Fernandes sf (Fernandes et al. 2009) model for 
+#maritime pine stands based on ws, litter mc, fuel depth
+#not clear what height for ws measurements...
 sf.fernandes <- function(ws, mc, fd) {
   ROS=0.773*ws^0.707*exp(-0.039*mc)*fd^0.188
   return(ROS)
 }
 
 #Add ISI-FT and isim-FT models
+# sf.nope <- nls(data=s.fires.mod %>% filter(FT=='Con'), 
+#                ROS ~ 0.5*ws^a*exp(-b*MC.SA)^c, 
+#                start=list(a=0.7, b=0.1, c=3))  #gives error
+
+#All this stuff to try to do a Tukey test but it's all NS anyway
+s.fires.mod2 <- mutate(s.fires.mod, FT=as.factor(FT))
+
+sf.ft <- lm(ROS ~ I(isi.m^2) + SFC + FT -1, 
+              data=s.fires.mod2) #SFC NS
+sf.ftim <- lm(ROS ~ I(isi.m^2) + FT-1, 
+              data=s.fires.mod2) #SFC NS
+
+sf.ftisi <- lm(ROS ~ I(ISI^2) + FT -1, 
+              data=s.fires.mod2) #SFC NS
+
+#Multiple comparisons - Tukey test
+#try 'emmeans' package
+# require(emmeans)
+# require(multcomp)
+# 
+# emmeans_output <- emmeans(sf.ftim, ~ FT)
+# 
+# cld(emmeans_output, alpha = 0.05, Letters = letters)
+#or
+#contrast(emmeans_output, method = "revpairwise", adjust = "tukey")
+
 
 ```
 
-### [More SF mods]
+### [Complex modelling attempts]
 
-```{r Model list, echo=FALSE}
-#Model list
-
-#add sros.st, 
-mod.list.long <- list(con.lm.mod, 
-              sros.ISI2.mod,
-              sros.ISI2SFC.mod,
-              sros.isim2.mod,
-              sros.isim2SFC.mod,
-              sf.crisi.mod,
-              sf.crisim.mod,
-              sf.axb.isi.mod,
-              sf.crisiCon.mod,
-              sf.crisimCon.mod,
-              c6s, 
-              sf.vw93i,
-              sf.vw93m)
-
-modnames <-c('isim2.con', 
-              'ISI2.agg',
-              'ISI2SFC.agg',
-              'isim2.agg',
-              'isim2SFC.agg',
-              'crisi.agg',
-              'crisim.agg',
-              'axb.isi.agg',
-              'crisi.con',
-              'crisim.con',
-             'c6s', 'c4s', 'c3s')
-
-#models only (not functions)
-mod.list <- mod.list.long[1:(length(mod.list)-3)]
-
-#generate table of evaluation metrics
-acc.table <- lapply(mod.list, broom::glance) 
-
-#extract vars from lists for AIC, nobs
-acc.tab2 <- lapply(acc.table, `[`, c('nobs', 'AIC' )) %>%
-  list_rbind() %>% round(1)
-
-efron.r2.vals <- lapply(mod.list, r2nls) %>%
-  unlist() %>% round(3)
-
-acc.tab3 <- mutate(acc.tab2, 
-                   Model=modnames[1:(length(modnames)-3)], 
-                   efron.r2=efron.r2.vals) %>%
-  select(Model, nobs, efron.r2, AIC)
-
-#ROS table at ISI (ISIm)=4, 8, 12
-isi.vals=c(5, 10, 15)
-mod.order.isim<- c(1, 4, 7, 10)
-
-#create blank list
-pred.list <- vector('list', length(mod.list))
-names(pred.list) <- modnames[1:(length(modnames)-3)]
-
-for (i in seq_along(mod.list)) {
-  pred.list[[i]] <- predict(mod.list[[i]], 
-                            newdata=
-                              data.frame(ISI=isi.vals,
-                                        isi.m=isi.vals,
-                                        SFC=1.5))
-}
-
-pred.df <- data.frame(ISI=isi.vals, pred.list) %>%
-  mutate_all(round, 2)
-
-#names(pred.df) <- c('isi.vals', paste0(modnames))
-
-#transpose
-pred2.df <- as.matrix(pred.df) %>% 
-  t() %>% as.data.frame() %>%
-  mutate(Model=colnames(pred.df)) %>%
-  slice(2:ncol(pred.df)) %>%
-  select(Model, everything())
-
-row.names(pred2.df) <- NULL
-colnames(pred2.df)[2:4] <- c('ISI.5', 'ISI.10', 'ISI.15' ) 
-
-v1 <- c6s(isi.vals)
-v2 <- sf.vw93i(isi.vals)
-v3 <- sf.vw93m(isi.vals)
-
-v13vals <- data.frame(v1, v2, v3) %>% as.matrix %>% t() %>%
-  as.data.frame()
-
-predAdd.df <- data.frame(Model=modnames[11:13], 
-                         ISI.5=v13vals[,1] %>% round(2),
-                         ISI.10=v13vals[,2] %>% round(2),
-                         ISI.15=v13vals[,3] %>% round(2))
-
-pred3.df <- rbind(pred2.df, predAdd.df)
-
-acc.tab4 <- left_join(pred3.df, acc.tab3, by='Model') %>%
-  select(Model, nobs, AIC, efron.r2, everything())
-
-#write.csv(acc.tab4, 'acc_table.csv')
-
+```{r fancy modeling attempts, echo=FALSE}
 
 
 ##Then try rpart models
@@ -507,21 +426,20 @@ lp.mods.con <- leaps::regsubsets(ROS ~ .,
 best2c <- lm(ROS ~ ISI2 + ISI -1, data=s.fires.cosquared) #no good
 
 
-#kinda useless function
-get.mod.formula <- function(id, object, outcome) {
-  models<-summary(object)$which[id,-1]
-  predictors <- names(which(models==TRUE))
-  predictors <-paste(predictors, collapse ="+")
-  as.formula(paste0(outcome, "~"))
-}
-
-
-
 ```
 
-### [graphs]
+### [graphs and functions]
 
 ```{r label=graphs, echo=FALSE}
+#calculate my own r2 function
+#r2nls <- function(model){
+# RSS=sum(residuals(model)^2)
+#   augmod=broom::augment(model)
+#   TSS=sum(augmod$ROS^2)
+#   r2=1-(RSS/TSS)
+#   return(r2)
+# }
+
 #more graphs
 #plotted data and best model; 
 #sf.isim2sfc075.fun function doesn't work yet
@@ -616,19 +534,21 @@ Previous studies have suggested that wind speed at the ground or flame height le
 
 ## 2. Methods
 
-#### Fire database
+### Fire database
 
 The Canadian experimental fire database was the primary source of surface fire observations. As previously described, varying sizes of square or rectangular plots were ignited from an exposed windward edge using line ignition techniques.
 
 We used the surface fire data to fit empirical rate of spread (ROS) models based on the fire environment variables. Consistent with the established theoretical understanding of surface fire spread [@Curry.Fons1940; @Campbell-Lochrie.etal2021] and the majority of existing empirical models [@fernandes2009; @Sullivan2009a], we focused on wind speed and fuel moisture content as primary variables of interest. Our starting point for operational models was the Initial Spread Index (ISI) [@vanwagner1987a] that combines these two factors according to the Fire Weather Index (FWI) and FBP System conventions [@fcfdg1992; @cfsfiredangergroup2021]. Variables including fuel type and surface fuel consumption were also examined.
 
-### ISI and ISI~SA~
+### Model-building: ISI and ISI~SA~
 
 As noted previously, the main independent variable used to predict ROS in the FBP System is the initial spread index (ISI), as originally described by Van Wagner [@vanWagner1987a; @ForestryCanadaFireDangerGroup1992]. The ISI represents a combination of empirical functions representing wind speed and fuel moisture influences, scaled for user convenience; as described, the ISI was designed both as an intermediate step in the calculation of the fire weather index (FWI) [@vanwagner1987a] as well as a key predictor of initial ROS in all fuel types [RSI; @ForestryCanadaFireDangerGroup1992].
 
 For modelling surface ROS, we sought to maintain the single variable utility of the ISI while also exploring a more recent and flexible fuel moisture estimate. We utilized the stand-adjusted moisture content (mc~SA~) model of Wotton and Beverly [-@Wotton.Beverly2007] that combines the effects of the FFMC and DMC indices along with stand type, density, and season for predicting the moisture content of dead litter, based on several thousand measurements at several sites across Canada. In order to leverage the additional flexibility of the mc~SA~, we calculated an alternative spread index based on the ISI equation, the stand-adjusted ISI (ISI~SA~). The ISI~SA~ involved the same ISI formulation as originally described by Van Wagner [-@vanwagner1987], but substituting the mc~SA~ value in place of the mc~FFMC~ for representing estimated litter moisture content. The full equation is provided for clarity and completeness:
 
-$$ ISI_{SA}=0.208\cdot [e^{0.05039\cdot WS_{10}}] \cdot (91.9 \cdot e^{-0.1386\cdot mc}) \cdot \left[ 1+\frac{mc^{5.31}}{(4.93\cdot 10^7)}) \right]  $$ , [5], with *WS~10~* representing the 10 metre open wind speed and *mc* representing mc~SA~ in this case. Both the ISI and the ISI~SA~ were tested in a variety of surface ROS model forms, discussed below.
+$$ ISI_{SA}=0.208\cdot [e^{0.05039\cdot ws}] \cdot (91.9 \cdot e^{-0.1386\cdot mc}) \cdot \left[ 1+\frac{mc^{5.31}}{(4.93\cdot 10^7)}) \right]  $$ , [5], with *ws* representing the 10 metre open wind speed and *mc* representing mc~SA~ in this case. Both the ISI and the ISI~SA~ were tested in a variety of surface ROS model forms, discussed below.
+
+To test for novel influences, we tested ws, FFMC, mcSA, DMC, ISI, ISIsa, SFC, fuel type, and stand density class predictor variables . We first calculated transformed terms for several of these: *ws^2^*, *ISI^2^*, *ISI~sa~^2^*, *SFC^2^*, and *sqrt(SFC)*, and tested all combinations using the 'leaps' package. We also tested for a non-linear response using the sigmoidal Chapman-Richards form previously described, using *ISI* or *ISI~sa~* and *SFC*. All analyses were performed in RStudio 2024.04 (Posit Software, Boston, MA, USA).
 
 ## 4. Results
 
@@ -652,18 +572,21 @@ fd.ros1 <- bind_rows(
   fd.ros0, s.miss %>% select(num, fire, ws, 
                         ROS, ISI, SFC, FiT2=Fire.type))
 
+#remove wildfires
 fd.ros <- fd.ros1 %>%
   filter(!num %in% c(68, 69, 76, 125))
 
-ggplot(fd.ros, aes(x=ws, y=ROS, colour=FiT2))+
+fig2 <-ggplot(fd.ros, aes(x=ws, y=ROS, colour=FiT2))+
   geom_point(alpha=0.7)+
   xlim(0, 35)+
   scale_colour_manual(values=c('red', 'orange', 'green')) +
   geom_smooth(method='lm', se=TRUE, level=0.95) +
   theme_classic()
 
+fig2
+
 #simple linear sROS model from graph:
-sf.lin <- lm(ROS ~ ws, data=fd.ros %>% filter(FiT2=='S'))
+sf.lin.ws <- lm(ROS ~ ws, data=fd.ros %>% filter(FiT2=='S'))
 
 ```
 
@@ -673,7 +596,13 @@ $$ROS=0.4911 + 0.1263 \cdot WS_{10}$$
 
 with *P*\<0.01 and adjusted *R^2^* =0.122.
 
-If we focus on surface fire observations, Figure 3 represents surface fires classified by fuel type and surface fuel consumption level. Despite identifying these fires as surface fires in primary sources, a few observations appeared anomalous; a closer examination identified several fires with significant estimated levels of canopy fuel consumption (CFC). Fires with estimated CFC \> 0.1 (mean CFC: 0.35 kg m\^2) were then removed from the surface model-fitting, as these fires with canopy fuel involvement were considered transitional to passive crown fire. Other questionable inclusions included fires in open Ponderosa pine / Douglas-fir stands, with partly cured understory grass [@nyberg1979; see Box 1] as well as fires observations in deciduous stands.
+Figure 3 shows the ROS of surface fires classified by fuel type and surface fuel consumption level, displayed by ISI value. Despite identifying these fires as surface fires in primary sources, a few observations appeared anomalous; a closer examination identified several fires with significant estimated levels of canopy fuel consumption (CFC). Fires with estimated CFC \> 0.1 (mean CFC: 0.35 kg m\^2; highlighted in Figure 3) were then removed from the surface model-fitting, as these fires were considered transitional to passive crown fire. Other questionable inclusions included fires in open Ponderosa pine / Douglas-fir stands, with partly cured understory grass [@nyberg1979; see Box 1] as well as fires observations in deciduous stands. Two of the most influential high ROS observations also happen to be wildfires, as noted (Figure 3).
+
+The simplest ISI-based model was a simple linear fit for the boreal and sub-boreal conifer observations, with deciduous and PPDF fires excluded (n=56):
+
+$$ ROS=-1.769 + 0.486 \cdot ISI $$
+
+[7]. This model had an adjusted *R^2^* of 0.459. As suggested by the negative intercept value, it predicts ROS \< 0 at low ISI values, with ROS=0 predicted at ISI of 3.64.
 
 ### [Fig3]
 
@@ -687,28 +616,188 @@ Fig3 <- ggplot(s.fires3 %>%
   geom_point(data=wildfires, colour='black', size=1, 
              shape=1) +
 #  geom_point(data=ppdf, aes(size=SFC), shape=21) +
-  stat_smooth(data=s.fires.con, method=lm, formula=y~I(x^2)-1, #same as sros.isi2.mod
-              se=FALSE, colour='black') +    
+  stat_smooth(data=s.fires.con, method=lm, formula=y~I(x^2)-1, 
+              se=FALSE, colour='black') + #same as sros.isi2.mod   
   stat_smooth(data=s.fires.con, method=lm, 
-              formula=y~x-1, se=FALSE, colour='gray') +
+              formula=y~x, se=FALSE, colour='gray') + #linear fit
   theme_classic()
 
 Fig3
 
-###Finish adding, identifying wildfires in Fig3
+sf.lin.isi <- lm(ROS~ISI, data=s.fires.con)
+#need to create linear ISI model like in graph and add to acc.tab4
+
 ```
 
-After testing various models of wind speed, ISI, and ISI~SA~ , the following models were produced [table: ]
+### [Box 1] 
 
-$$ROS=0.02249 \cdot ISI_{SA} ^2$$ [6], ##fix
+The main dataset of experimental burns conducted in Ponderosa pine-Douglas-fir forest stands in Canada was a series of experiments in the Dewdrop Range near Kamloops, British Columbia, conducted in 1978 and 1979. These seven\* experiments were originally published as student reports [@Nyberg1979;@Smaill1980], with original copies somewhat difficult to obtain. Some of the main weather and fire behaviour information was originally analyzed by members of the CFS Fire Danger Group as part of the 'C-7' fuel type, including wind speed, calculated FWI components, and measured ROS and fire type (unpublished; summarized in FCFDG 1992). However, this was the only description of the C-7 fuel type ever published, and the assumptions and calculations remained unknown. Surface fuel consumption in these experiments was reported or estimated for only one of the burn experiments, and resulted in a very high (possibly suspect) estimate of \> 5 kg m^-2^ of woody fuel consumption and total SFC of 5.3 kg m^-2^.
 
-with adjusted r^2^ =0.689 ##fix.
+During the course of the present project, original copies of these documents were located and the surface fuel consumption and grass curing values identified by Nyberg and Smaill were reanalyzed. This resulted in new (much lower: 0.28 – 0.92 kg m^-2^) forest floor consumption values associated with seven of the original plots. These are open stands dominated by Ponderosa pine, with canopy closure values estimated for all plots between 23 % and 43 % (mean closure: 33.2 %), grassy understories, with grass fuel load (sum of all live and dead grasses and forbs) of 0.041 kg m^-2^. It remains unclear where the original estimate of 5.3 kg m^-2^ originated. Given the order of magnitude difference between the original value and new values reported here, some sort of error in transcription or calculation appears likely.
 
-Figure 4.
+\*Plot numbers 1-6, burned in 1978, are described by Nyberg (1979). Plot 9, burned in 1979, is described by Smaill (1980). Plot 8 from the same site was apparently burned in 1980, but no notes or published description survives.
+
+[end Box 1]
+
+We tested models with various combinations of of predictors, though most model forms using more than one or two predictors were non-significant owing to the modest number of observations and high variability. The best results were obtained using combinations with *ISI* or *ISI~SA~*, as linear or squared terms. We forced the intercept through zero due to the known lack of fire spread potential during high moisture conditions (e.g. ISI \< 2).
+
+Table 1 shows some the parameters and evaluation metrics of some of the more useful models along with the previously described FBP-era models. As the table indicates, some of the models were fitted to the entire dataset of surface fire observations, with or without a surface fuel consumption variable.
+
+The 'aggregated data' models used a dataset that included all observations except those with canopy fuel involvement, as noted previously; the PPDF fires were adjusted to a curing rate of 90%, as per Cheney##. Other models used only the boreal and sub-boreal conifer observations to avoid influence from either the deciduous experiments or the PPDF fires.
+
+### [Model summary]
+
+```{r Mod sum table, echo=FALSE}
+#Model list
+
+#add sros.st, 
+mod.list.long <- list(sf.lin.isi,  
+              con.lm.mod, 
+              sros.ISI2.mod,
+              sros.ISI2SFC.mod,
+              sros.isim2.mod,
+              sros.isim2SFC.mod,
+              sf.crisi.mod,
+              sf.crisim.mod,
+              sf.axb.isi.mod,
+              sf.crisiCon.mod,
+              sf.crisimCon.mod,
+              c6s, 
+              sf.vw93i,
+              sf.vw93m,
+              sf.d1)
+
+modnames <-c('sf.lin',
+              'isim2.con', 
+              'ISI2.agg',
+              'ISI2SFC.agg',
+              'isim2.agg',
+              'isim2SFC.agg',
+              'crisi.agg',
+              'crisim.agg',
+              'axb.isi.agg',
+              'crisi.con',
+              'crisim.con',
+             'c6s', 'c4s', 'c3s', 'd1')
+
+#models only (not functions)
+mod.list <- mod.list.long[1:(length(mod.list.long)-4)]
+
+#generate table of evaluation metrics
+#MAE, MAPE, MSE
+acc.table2 <- rcompanion::accuracy(mod.list) %>% as.data.frame() %>%
+  mutate(num=1:length(mod.list))
+
+#get AIC, num of obs
+acc.glance <- lapply(mod.list, broom::glance)
+
+acc.glance2 <- lapply(acc.glance, `[`, c('nobs', 'AIC' )) %>%
+  list_rbind() %>% round(1) %>%
+  mutate(num=1:length(acc.glance))
+
+#combine the two evaluation tables, clean up
+acc.table3 <- left_join(acc.glance2, acc.table2, 
+                        by='num') %>%
+  mutate(Model=modnames[1:(length(modnames)-4)]) %>%
+  rename(MAE=Fit.criteria.MAE,
+         MAPE=Fit.criteria.MAPE,
+         RMSE=Fit.criteria.RMSE,
+         EfronR2=Fit.criteria.Efron.r.squared
+        ) %>%
+  select(num, Model, nobs, RMSE, MAE, MAPE, EfronR2, AIC)
+
+#ROS table at ISI (ISIm)=5, 10, 15
+isi.vals=c(5, 10, 15)
+mod.order.isim<- c(1, 4, 7, 10)
+
+#create blank list
+pred.list <- vector('list', length(mod.list))
+names(pred.list) <- modnames[1:(length(modnames)-4)]
+
+for (i in seq_along(mod.list)) {
+  pred.list[[i]] <- predict(mod.list[[i]], 
+                            newdata=
+                              data.frame(ISI=isi.vals,
+                                        isi.m=isi.vals,
+                                        SFC=1.5))
+}
+
+pred.df <- data.frame(ISI=isi.vals, pred.list) %>%
+  mutate_all(round, 2)
+
+#transpose
+pred2.df <- as.matrix(pred.df) %>% 
+  t() %>% as.data.frame() %>%
+  mutate(Model=colnames(pred.df)) %>%
+  slice(2:ncol(pred.df)) %>%
+  select(Model, everything())
+
+row.names(pred2.df) <- NULL
+colnames(pred2.df)[2:4] <- c('ISI.5', 'ISI.10', 'ISI.15' ) 
+
+v1 <- c6s(isi.vals)
+v2 <- sf.vw93i(isi.vals)
+v3 <- sf.vw93m(isi.vals)
+v4 <- sf.d1(isi.vals)
+
+v14vals <- data.frame(v1, v2, v3, v4) %>%
+  as.matrix %>% t() %>%
+  as.data.frame()
+
+predAdd.df <- data.frame(Model=modnames[12:15], 
+                         ISI.5=v14vals[,1] %>% round(2),
+                         ISI.10=v14vals[,2] %>% round(2),
+                         ISI.15=v14vals[,3] %>% round(2))
+
+pred3.df <- rbind(pred2.df, predAdd.df)
+
+acc.tab4 <- left_join(pred3.df, acc.table3, by='Model') %>%
+  mutate(Num=1:max(nrow(pred3.df),nrow(acc.table3))) %>%
+  select(Num, Model, nobs, everything(), -num)
+
+######################
+#write.csv(acc.tab4, 'acc_table.csv')
+
+#extra table for SFC-based models
+sfc.names <- rep(c('ISI2SFC.agg', 'isim2SFC.agg'), each=3)
+sfc.levels <- c(0.7, 1.5, 3)
+
+#sf.isi2sfc.fun and sf.isim2sfc.fun - calc ROS for 3 ISI vals, 2 SFC vals
+sfc.isivals <- mapply(FUN=sf.isi2sfc.fun, isi=rep(isi.vals, 3), 
+                 sfc=rep(sfc.levels, each=3)) %>%
+  matrix(nrow=3, ncol=3, byrow=TRUE) %>%  #calculate ROS for each combo
+  as.data.frame() 
+colnames(sfc.isivals) <- c('ISI.5', 'ISI.10', 'ISI.15')
+
+sfc.isimvals <- mapply(FUN=sf.isim2sfc.fun, isim=rep(isi.vals, 3),
+                sfc=rep(sfc.levels, each=3)) %>%
+  matrix(nrow=3, ncol=3, byrow=TRUE) %>%
+  as.data.frame()
+colnames(sfc.isimvals) <- c('ISI.5', 'ISI.10', 'ISI.15')
+
+#combine df for both models
+sfc.allvals <- rbind(sfc.isivals, sfc.isimvals) %>%
+  round(2)
+
+ex.sfc.tab <- mutate(sfc.allvals, 
+                     Model=sfc.names, 
+                     SFC=rep(sfc.levels, 2),
+                     num=1:6) %>%
+  select(num, Model, SFC, everything())
+
+#####################################
+acc.tab4
+ex.sfc.tab
+
+```
+
+### [Figure 4.]
 
 ```{r label=Fig4}
 fig4
 ```
+
+#fix.
 
 Figure 5 shows the surface ROS observations plotted against wind speed, along with the Equation 5 sROS model at three estimated moisture content levels. Calculation of Cook's Distance (D~c~) identified one observation as particularly influential in the regression - the fastest sROS observation in the dataset, with D~c~= 0.530. This observation represented the initial surface fire under jack pine in the Gwatkin Lake wildfire ('GL-A'). Although it appears unduly influential, deleting this observation and refitting Equation 6 produced a model (Equation 6') with an only marginally altered slope coefficient (0.02097). Comparing the two models, Equation 6 predicts ROS for the GL-A observation (ws = 23.0, mc~SA~=7.22) of 11.3 m min^-1^, an underprediction of 5.8 % compared to observed ROS (12.0 m min^-1^); in contrast, Equation 6' predicts ROS of 10.5 m min^-1^, 0.8 m min^-1^ lower than the Equation 6 result.
 
@@ -727,5 +816,7 @@ Although the most relevant value related to wind velocity might be the mid-flame
 While physical fire spread models attempt to represent heat transfer and combustion processes, empirical and
 
 One question is possibly most important for operational use: are these models credible, and would they be reasonably effective (+/- 50 %) for predicting fire spread within and outside the data range? We have already established that extreme conditions (e.g., ISI \> 20) are associated with crown fire behaviour in most stands, demanding a different set of models. Extreme conditions in conifer forests where surface fire behaviour is expected (and appropriate models were needed) might be associated with very high canopy structure (e.g., LCBH \> 10 m), such as in a mature pine or Douglas-fir stand, possibly together with fuel treatment work to remove smaller trees and other ladder fuels (e.g. Fig. x [pic. from Sooke - moderate stand, LCBH of 13-15 m]). Alternatively, high danger conditions (not extreme), including ISI values of \~10-15 would be a more common concern for sROS models.
+
+Under very low danger conditions (e.g., FFMC \< 70 or ISI \< 1), ignition in needle fuel substrates becomes highly unlikely [@beverly2007], so ROS is a minimal concern.
 
 It is expected that the quality and quantity of source data will improve over time, allowing for periodic reanalysis and improvement of these models.
