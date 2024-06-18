@@ -11,8 +11,6 @@ bibliography: 'C:/Dan/Zotero/My library.bib'
 csl: "ecological-applications.csl"
 ---
 
-#ok - references are working; just need to fix all citations! Use the keys found in Zotero, not here
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,root.dir = 'c:/Dan/_Remote_projects/ccp-sROS')
 
@@ -24,7 +22,7 @@ library(tidyverse)
 
 #Get data frame, ready to query 
 #Import data frame
-fd <- read.csv('./files/fire_data_may2024.csv')  # with corrected SFC from McRae, Sharp p#16 to sharp.th, PNFI R5 MC.SA
+fd <- read.csv('./files/fire_data_June2024.csv')  # with corrected SFC from McRae, Sharp p#16 to sharp.th, PNFI R5 MC.SA, Dewdrop SFC corrected
 
 #FWI and moisture functions 
 load(file='./files/wbmc5.rda')
@@ -135,7 +133,7 @@ s.fires2 <- bind_rows(s.fires, s.miss)
 
 ```
 
-### [Proc. SF models]
+### [Proc. SF models and mod PPDF]
 
 ```{r label=sROS, echo=FALSE, message=FALSE, warning=FALSE}
 #ROS models 
@@ -170,21 +168,28 @@ s.fires3 <- s.fires2 %>%
   mutate(
     CFC=ifelse(num==48, 0.2, CFC),   #assume R3 torching
     CFC=ifelse(is.na(CFC), 0, CFC)) %>%
-            filter(CFC <= 0.1)
+            filter(CFC <= 0.2)
 
 #Curing and C7 fires
 ppdf <- filter(s.fires3, num %in% dewdrop & !is.na(Grass.Cure))
 
-c7.fullcuring <- 100  #
+c7.fullcuring <- 95  #
 fc.cf <- gr.cf(c7.fullcuring)
 
 #grass curing function
-s.fires.mod <- s.fires3 %>%
+#0.5 actual ROS plus 0.5 of 'full curing' ROS if it was all grass
+#mean(0.67, 0.47, 0.83)
+#set SFC p8 to mean above
+
+s.fires.mod0 <- s.fires3 
+
+s.fires.mod0$SFC[which(str_detect(s.fires.mod0$fire, 'JOHNSON EXP FIRE 8'))] <- mean(0.67, 0.47, 0.83)
+
+s.fires.mod <- s.fires.mod0 %>%
   mutate(CF=gr.cf(curing=Grass.Cure),
          ROS=ifelse(is.na(Grass.Cure), ROS,
-            ROS/2+ROS*fc.cf*(1/CF)/2)) #0.5 actual ROS plus 0.5
-                 #of 'full curing' ROS if it was all grass
-
+            ROS/2+ROS*fc.cf*(1/CF)/2))
+         
 #So far these models involve - 
 # - Cutting out data with CFC > 1
 # - 'Detrending' PIPO fires to simulate 100% grass curing, half
@@ -602,7 +607,7 @@ The simplest ISI-based model was a simple linear fit for the boreal and sub-bore
 
 $$ ROS=-1.769 + 0.486 \cdot ISI $$
 
-[7]. This model had an adjusted *R^2^* of 0.459. As suggested by the negative intercept value, it predicts ROS \< 0 at low ISI values, with ROS=0 predicted at ISI of 3.64.
+[7]. This model had an adjusted *R^2^* of 0.459. As suggested by the negative intercept value, it predicts the illogical result of ROS \< 0 at low ISI values, with ROS=0 predicted at ISI of 3.64.
 
 ### [Fig3]
 
@@ -629,23 +634,30 @@ sf.lin.isi <- lm(ROS~ISI, data=s.fires.con)
 
 ```
 
-### [Box 1] 
+### [Box 1]
 
-The main dataset of experimental burns conducted in Ponderosa pine-Douglas-fir forest stands in Canada was a series of experiments in the Dewdrop Range near Kamloops, British Columbia, conducted in 1978 and 1979. These seven\* experiments were originally published as student reports [@Nyberg1979;@Smaill1980], with original copies somewhat difficult to obtain. Some of the main weather and fire behaviour information was originally analyzed by members of the CFS Fire Danger Group as part of the 'C-7' fuel type, including wind speed, calculated FWI components, and measured ROS and fire type (unpublished; summarized in FCFDG 1992). However, this was the only description of the C-7 fuel type ever published, and the assumptions and calculations remained unknown. Surface fuel consumption in these experiments was reported or estimated for only one of the burn experiments, and resulted in a very high (possibly suspect) estimate of \> 5 kg m^-2^ of woody fuel consumption and total SFC of 5.3 kg m^-2^.
+The main dataset of experimental burns conducted in Ponderosa pine-Douglas-fir forest stands in Canada was a series of experiments in the Dewdrop Range near Kamloops, British Columbia, conducted in 1978 and 1979. These seven\* experiments were originally published as student reports [@Nyberg1979; @Smaill1980], with original copies somewhat difficult to obtain. Nevertheless, the experiments they describe remain valuable and seldom replicated. Some of the ensuing weather and fire behaviour information was originally analyzed as part of the FBP System 'C-7' fuel type, including wind speed, calculated FWI components, and measured ROS and fire type (unpublished; some data summarized in FCFDG 1992). However, only the summary descriptions of the C-7 fuel type were ever published, and the actual measurements and calculations remained obscure. Surface fuel consumption (SFC) in these experiments was reported or estimated for only one of the burn experiments (Plot 9, burned on 17 September 1978), and resulted in a very high (possibly suspect) estimate of \> 5 kg m^-2^ of woody fuel consumption and total SFC of 5.3 kg m^-2^.
 
-During the course of the present project, original copies of these documents were located and the surface fuel consumption and grass curing values identified by Nyberg and Smaill were reanalyzed. This resulted in new (much lower: 0.28 – 0.92 kg m^-2^) forest floor consumption values associated with seven of the original plots. These are open stands dominated by Ponderosa pine, with canopy closure values estimated for all plots between 23 % and 43 % (mean closure: 33.2 %), grassy understories, with grass fuel load (sum of all live and dead grasses and forbs) of 0.041 kg m^-2^. It remains unclear where the original estimate of 5.3 kg m^-2^ originated. Given the order of magnitude difference between the original value and new values reported here, some sort of error in transcription or calculation appears likely.
+During the course of the present project, original copies of these documents were located and the surface fuel consumption and grass curing values were reanalyzed. This resulted in newly calculated SFC values for Plots 1-6 (0.47 – 1.39 kg m^-2^), and a corrected (notably lower: 2.01 kg m^-2^) SFC value for Plot 9.\*\*
 
-\*Plot numbers 1-6, burned in 1978, are described by Nyberg (1979). Plot 9, burned in 1979, is described by Smaill (1980). Plot 8 from the same site was apparently burned in 1980, but no notes or published description survives.
+Stand structure consisted of open forests of Ponderosa pine and Douglas-fir, with canopy closure values estimated between 23 % and 43 % (mean closure: 33.2 %) based on spherical densiometer measurements. Understory vegetation was dominated by herbaceous species, with live and dead portions tracked throughout the season (Nyberg 1979). The original SFC estimate for Plot 9 appears to have included consumption of large woody debris (\> 7 cm diameter); this is at odds with the majority of FBP experimental burns and assumption of consumption in the flaming front, where SFC values relevant to flaming intensity do not include large diameter logs.
+
+The other notable feature associated with these experimental burns is the summer weather pattern and understory condition. As Nyberg [-@Nyberg1979] describes, summer 1979 was an abnormally wet year in the Kamloops area, with measurable rainfall received at the site nearly every week from April through end of August. Perhaps as a result, understory vegetation remained relatively green for the six experimental burns. Relative proportions of live and dead grass and forb biomass were presently interpreted as percent curing values (% C) in the same manner as used in Australian and Canadian grass fire models (see, e.g. the 'Open' (O-1) fuel type in FCFDG 1992), a measure that is also believed to play a significant role in fire spread in open Ponderosa pine stands . Understory % C values were calculated using the following equation:
+
+$$C = \frac {GB_D} {(GB_D + GB_L)} \cdot 100
+$$ where *C* is the percent curing (as per FCFDG 1992), and *GB~D~* and *GB~L~* represent dead and live grass biomass (g m^-2^), respectively. The mean value from the experimental plot sampling and control plot sampling was used on each given date (Nyberg 1979). This gave % C values of 56-66 % for Plots 1-6. For Plot 9, the reported values are unfortunately less explicit between live and dead biomass and the above formula cannot be used. Based on the date (17 September) and low overall grass moisture value [22.7 %; @Smaill1980], % C for that plot was estimated at 85%.
+
+\*Plot numbers 1-6, burned in 1978, are described by Nyberg (1979). Plot 9, burned in 1979, is described by Smaill (1980). Plot 8 from the same site was apparently burned in 1980, but no further notes or published description have been located.
+
+\*\*SFC estimates represent the sum of the differences between pre-burn and post-burn fuel loading, including woody fuels (0-7.62 cm diameter classes), grasses and forbs, and litter (the site featured negligible duff quantities). Estimating litter consumption values also required an estimate of pre-burn litter depth, which was was taken from Ducherer et al. [-@ducherer2009], a later series of experiments at the same site (mean litter depth from control sites: .
 
 [end Box 1]
 
-We tested models with various combinations of of predictors, though most model forms using more than one or two predictors were non-significant owing to the modest number of observations and high variability. The best results were obtained using combinations with *ISI* or *ISI~SA~*, as linear or squared terms. We forced the intercept through zero due to the known lack of fire spread potential during high moisture conditions (e.g. ISI \< 2).
+### Model forms
 
-Table 1 shows some the parameters and evaluation metrics of some of the more useful models along with the previously described FBP-era models. As the table indicates, some of the models were fitted to the entire dataset of surface fire observations, with or without a surface fuel consumption variable.
+We tested models with various combinations of of predictors, though most model forms using more than one or two predictors were non-significant owing to the modest number of observations and high variability. The best results were obtained using combinations with *ISI* or *ISI~SA~*, as linear or squared terms. We forced the intercept through zero due to the known lack of fire spread potential during high moisture conditions (e.g. ISI \< 2) and the importance of models that performed logically across the full range of conditions.
 
-The 'aggregated data' models used a dataset that included all observations except those with canopy fuel involvement, as noted previously; the PPDF fires were adjusted to a curing rate of 90%, as per Cheney##. Other models used only the boreal and sub-boreal conifer observations to avoid influence from either the deciduous experiments or the PPDF fires.
-
-### [Model summary]
+### [Table 1: Model summary]
 
 ```{r Mod sum table, echo=FALSE}
 #Model list
@@ -667,7 +679,7 @@ mod.list.long <- list(sf.lin.isi,
               sf.vw93m,
               sf.d1)
 
-modnames <-c('sf.lin',
+modnames <-c('isi.lin',
               'isim2.con', 
               'ISI2.agg',
               'ISI2SFC.agg',
@@ -765,11 +777,12 @@ sfc.levels <- c(0.7, 1.5, 3)
 #sf.isi2sfc.fun and sf.isim2sfc.fun - calc ROS for 3 ISI vals, 2 SFC vals
 sfc.isivals <- mapply(FUN=sf.isi2sfc.fun, isi=rep(isi.vals, 3), 
                  sfc=rep(sfc.levels, each=3)) %>%
-  matrix(nrow=3, ncol=3, byrow=TRUE) %>%  #calculate ROS for each combo
+  matrix(nrow=3, ncol=3, byrow=TRUE) %>%  #calculate ROS for each
   as.data.frame() 
 colnames(sfc.isivals) <- c('ISI.5', 'ISI.10', 'ISI.15')
 
-sfc.isimvals <- mapply(FUN=sf.isim2sfc.fun, isim=rep(isi.vals, 3),
+sfc.isimvals <- mapply(FUN=sf.isim2sfc.fun, 
+                       isim=rep(isi.vals,3),
                 sfc=rep(sfc.levels, each=3)) %>%
   matrix(nrow=3, ncol=3, byrow=TRUE) %>%
   as.data.frame()
@@ -787,9 +800,23 @@ ex.sfc.tab <- mutate(sfc.allvals,
 
 #####################################
 acc.tab4
-ex.sfc.tab
+#ex.sfc.tab
 
 ```
+
+Table 1 shows some the parameters and evaluation metrics of some of the more useful models along with predictions from the previously described FBP-era models. As the table indicates, the datasets used varied from `r min(acc.tab4$nobs)` to `r max(acc.tab4$nobs)`. Models forms 1, 2, 10 and 11 used only the boreal conifer (pine and spruce surface fire) observations and had slightly better performance (higher Efron's r-squared, lower MAE and MAPE) than model fitted to the larger aggregated dataset. Note that some of the highest-ROS observations were from wildfire observations (rather than experimental burns).
+
+The 'aggregated data' models included all observations except those with canopy fuel involvement, as noted previously. The modified PPDF fires were adjusted to a curing rate of 95 %, using the assumptions of 50 % litter, 50 % grass influence as noted above. Due to the inclusion of these lower ROS
+
+### [Table 2: Extended SFC predictions]
+
+```{r Table 2, echo=FALSE}
+ex.sfc.tab
+```
+
+Table 2 shows extended ROS predictions for the two models with ISI (or ISISA) and SFC predictors. Both models were fitted with a sqrt(SFC) term, which performed slightly better (ISI: adjusted R^2^=`r summary(sros.ISI2SFC.mod)$adj.r.squared %>% round(4)`); ISI~SA~: adjusted R^2^=`r summary(sros.isim2SFC.mod)$adj.r.squared %>% round(4)`) than an untransformed SFC term (ISI: `r summary(update(sros.ISI2SFC.mod, ~.-sqrt(SFC) + SFC) )$adj.r.squared %>% round(4)` ; ISISA: `r summary(update(sros.isim2SFC.mod, ~.-sqrt(SFC) + SFC) )$adj.r.squared %>% round(4)` , respectively).
+
+Comparing models overall, the
 
 ### [Figure 4.]
 
