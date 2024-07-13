@@ -51,7 +51,7 @@ fd.all <- bind_rows(fd4 %>% select(
 
 ## Abstract
 
-Fire behaviour in conifer forests is often equated with the crown fire problem, though surface fire spread is more frequently encountered. Surface fire models can help predict fire behaviour under low to moderate fire danger conditions or in forest stands with a high crown base. We used a database of conifer-dominated experimental surface fires to fit simple empirical models of rate of spread (ROS) under light-to-dense canopy stands that can be readily integrated within operational decision support systems. Final models include the Canadian Initial Spread Index (ISI) along with a stand-adjusted version (ISI~SA~). While imprecise, these models are usually accurate enough (within +/- 2–4 m min^-1^) for many forecasting and fire management purposes.
+Fire behaviour in conifer forests is often equated with predicting crown fire activity, though surface fire spread is more frequently encountered. Surface fire models can help predict fire behaviour under low to moderate fire danger conditions or in forest stands with a high crown base. We used a database of conifer-dominated experimental surface fires to fit simple empirical models of rate of spread (ROS) under light-to-dense canopy stands that can be readily integrated within operational decision support systems. Final models include the Canadian Initial Spread Index (ISI) along with a stand-adjusted version (ISI~SA~) as predictors, along with estimated surface fuel consumption (SFC). While imprecise, these models are usually accurate enough (within +/- 2–4 m min^-1^) for many forecasting and fire management purposes.
 
 ### [Process - get SF data]
 
@@ -202,6 +202,9 @@ s.fires.mod <- s.fires.mod0 %>%
 sros.ISI2.mod <- lm(ROS ~ I(ISI^2)-1, data=s.fires.mod)
 #r^2=0.7217 with s.fires3
 #r^2=0.692 with s.fires.mod
+
+#wind speed squared only
+sros.ws2.mod <- lm(ROS ~ I(ws^2)-1, data=s.fires.mod)
 
 #lm using isi.m^2
 sros.isim2.mod <- lm(ROS ~ I(isi.m^2)-1, data=s.fires.mod)
@@ -442,7 +445,6 @@ best2c <- lm(ROS ~ ISI2 + ISI -1, data=s.fires.cosquared) #no good
 ### [graphs and functions]
 
 ```{r label=graphs, echo=FALSE}
-#add in PPDF.mod
 
 fig4 <- ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
        aes(x=isi.m, y=ROS)) +  
@@ -497,17 +499,19 @@ fig5 <- ggplot(s.fires.mod %>% filter(!is.na(SFC)),
 
 ## 1. Introduction
 
-The rate of spread, or rate of forward advance, of a wildfire is probably its most important descriptive characteristic for fire managers [@VanWagner1965; @Sullivan.Gould2020]. Fire behaviour in the conifer forests of Canada is often a story about crown fire – high intensity, rapidly spreading fires with flames overtopping the trees and ember spotting ahead of the front [@alexanderCrownFireDynamics2016]. And yet in the chronology of fire events, most days between ignition and extinction feature only ground or surface fire behaviour [@Wang.etal2014]. Surface fires can often be safely and routinely actioned by suppression crews and equipment [@Wheatley.etal2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
+The rate of spread, or rate of forward advance, of a wildfire is probably its most important descriptive characteristic for fire managers [@VanWagner1965a]; @Sullivan.Gould2020]. Fire behaviour in the conifer forests of Canada is often a story about crown fire – high intensity, rapidly spreading fires with flames overtopping the trees and ember spotting ahead of the front [@alexanderCrownFireDynamics2016]. And yet in the chronology of fire events, most days between ignition and extinction feature only ground or surface fire behaviour [@Wang.etal2014]. Surface fires can often be safely and routinely actioned by suppression crews and equipment [@Wheatley.etal2022], and managers need to be able to estimate the speed and intensity of fires even when crown fire activity is unlikely.
 
 ### Surface fire spread in the Canadian Fire Behavior Prediction System
 
-Surface fire spread models have not been the primary focus of past Canadian fire behaviour modelling efforts, though they have made appearances. The present Fire Behavior Prediction System (FBPS) features fuel-type specific models encompassing the full range of surface through crown fire behaviour for a small number of conifer fuel complexes [@forestrycanadafiredangergroup1992a; @tymstra2010]. Thus, the majority of conifer ROS models do not discriminate between surface and crown fire behaviour but rather assume a gradual transition between fire types; a deliberate decision discussed by Van Wagner during the system's development [@vanwagner1989a]. However, more recent and flexible conifer modelling schemes exist that are specific in terms of the type of fire predicted under given weather and moisture inputs; these include CFIS (Crown Fire Initiation and Spread), Conifer Pyrometrics, and the forthcoming 'next generation' Fire Behavior Prediction System [@Alexander.etal2006a; @perrakis2020; @cfsfiredangergroup2021]. These models beg the question of what fire behaviour to expect (ROS, fire intensity, etc.) when crown fire behaviour is not predicted to occur. Pure surface fire models do exist in the FBPS for fuel complexes that do not exhibit crown fire behaviour: deciduous forests, open (treeless; i.e. grassland) communities, and scattered logging slash, in the form of the D-1, O-1 and slash (S-1 through S-3) fuel types, respectively, with the grassland models based entirely on Australian data [@forestrycanadafiredangergroup1992a]. As with the conifer fuel types, surface fire spread rate equations for these fuel types are based on the Chapman-Richards function [@vanwagner1989a]:
+Surface fire spread models have not been the primary focus of past Canadian fire behaviour modelling efforts, though they have made appearances. The present Fire Behavior Prediction System (FBPS) features fuel-type specific models encompassing the full range of surface through crown fire behaviour for a small number of conifer fuel complexes [@forestrycanadafiredangergroup1992a; @tymstra2010]. Thus, the majority of conifer ROS models do not discriminate between surface and crown fire behaviour but rather assume a gradual transition between fire types; a deliberate decision discussed by Van Wagner during the system's development [@vanwagner1989a]. However, more recent and flexible conifer modelling schemes exist that are specific in terms of the type of fire predicted under given weather and moisture inputs; these include CFIS (Crown Fire Initiation and Spread), Conifer Pyrometrics, and the forthcoming 'next generation' Fire Behavior Prediction System [@Alexander.etal2006a; @perrakis2020; @cfsfiredangergroup2021]. These models beg the question of what fire behaviour to expect (ROS, fire intensity, etc.) when crown fire behaviour is not predicted to occur. Pure surface fire models do exist in the FBPS for fuel complexes that do not exhibit crown fire behaviour: deciduous forests, open (treeless; i.e. grassland) communities, and scattered logging slash, in the form of the D-1, O-1 and slash (S-1 through S-3) fuel types, respectively [@forestrycanadafiredangergroup1992a]. As with the conifer fuel types, surface fire spread rate equations for these fuel types are based on the Chapman-Richards function [@vanwagner1989a]:
 
 $$ROS=a(1-e^{-b\cdot ISI})^c$$ [1],
 
-with the a, b, and c parameters assigned or fitted for each fuel type. Newer models have also been developed for grass [@wotton2009; @Kidnie.Wotton2015] and atlantic shrublands [@Pepin.Wotton2020]. A few models were previously published for predicting surface fire spread in conifer stands based on sparse observations at individual research sites [e.g., @Lawson1972], but these data were eventually incorporated into the broader-scope FBP fuel type functions. Numerous other countries and labs have developed surface fire spread models usable in conifer forest litter, typically using empirical or semi-empirical approaches based on laboratory studies [e.g., @rothermel1972; @rossa2018]. These will be discussed later for comparison with our present findings.
+with the a, b, and c parameters assigned or fitted for each fuel type. Newer models have also been developed for grass [@wotton2009; @Kidnie.Wotton2015] and atlantic shrublands [@Pepin.Wotton2020]. A few models were previously published for predicting surface fire spread in conifer stands based on sparse observations at individual research sites [e.g., @Lawson1972], but these data were eventually incorporated into the broader-scope FBP fuel type functions.
 
-As the FBP System was being developed, a more flexible theoretical dual equilibrium conifer crown fire model concept was proposed by CE Van Wagner. This involved a function for the expected rate of spread of crown fires, RSC, as well as a separate function, RSS, representing "all possible surface fires"[@vanwagner1989a], with a crown fire initiation model representing the transition point between the two functions [@vanwagner1977a]. Suggested parameters for the RSS function appeared in the FBPS report in the form of the C-6S model, for the surface fire portion of the 'Conifer Plantation' fuel type: *a*=30, *b*=0.080, *c*=3; no explanation was provided as to the origin of these values [@forestrycanadafiredangergroup1992a]. Two additional sets of RSS parameters were published shortly thereafter, associated with surface fire spread in immature and mature jack pine stands in Ontario [@vanwagner1993a]. The immature stand was the source of many observations from the C-4 fuel type [@stocks1987b], with the following parameters ("C4S"): *a*=20, *b*=0.20, *c*=5. Surface fire observations from mature pine stands associated with the C-3 fuel type [@stocks1989] were used to form another RSS model ("C3S"): *a*=15, *b*=0.05, *c*=2. Again, no source was given for the origin of these parameters [@vanwagner1993a], and we presently assume they were derived by visual inspection from the limited underlying data. Figure 1 compares these notional conifer surface fire ROS models along with the D-1 model for comparison (*a*=30, *b*=0.0232, *c*=1.6). As the figure shows, at moderately high danger levels (ISI 10-15), these models predict ROS between 2.3 and 9.7 m min^-1^ (ISI 10) and between 4.2 and 15.5 m min^-1^ (ISI 15), with C3S and D1 curves predicting the lowest ROS and the C4S predicting the highest ROS.
+### Van Wagner's surface fire models
+
+As the FBP System was being developed, a more flexible theoretical dual equilibrium conifer crown fire model concept was proposed by CE Van Wagner. This involved a notional function describing the expected rate of spread of crown fires, RSC, as well as a separate function, RSS, representing "all possible surface fires"[@vanwagner1989a], with a crown fire initiation model representing the transition point between the two functions [@vanwagner1977a]. Suggested parameters for the RSS function appeared in the FBPS report in the form of the C-6S model, for the surface fire portion of the 'Conifer Plantation' fuel type: *a*=30, *b*=0.080, *c*=3; no explanation was provided as to the origin of these values [@forestrycanadafiredangergroup1992a]. Two additional sets of RSS parameters were published shortly thereafter, associated with surface fire spread in immature and mature jack pine stands in Ontario [@vanwagner1993a]. The immature stand was the source of many observations from the C-4 fuel type [@stocks1987b], with the following parameters ("C4S"): *a*=20, *b*=0.20, *c*=5. Surface fire observations from mature pine stands associated with the C-3 fuel type [@stocks1989] were used to form another RSS model ("C3S"): *a*=15, *b*=0.05, *c*=2. Again, no source was given for the origin of these parameters [@vanwagner1993a], and we presently assume they were derived by visual inspection from the limited underlying data. Figure 1 compares these notional conifer surface fire ROS models along with the D-1 model for comparison (*a*=30, *b*=0.0232, *c*=1.6). As the figure shows, as fire danger levels increase (i.e., higher ISI), predicted surface ROS predictions vary widely between these models, with C3S and D1 curves predicting the lowest and the C4S predicting the highest values, respectively.
 
 ### [Fig1]
 
@@ -569,7 +573,7 @@ Our database of `r nrow(fd.all)` observations resulted in `r nrow(filter(fd.all,
 
 ### [Fig 2 simple ROS graph by fire type]
 
-```{r label=Fig2}
+```{r label=Fig2, echo=FALSE}
 #Call all 'midstory passive crown fires' surface fires if
 #CFC is less than 0.1
 fd.ros0 <- mutate(fd4,
@@ -617,7 +621,7 @@ $$ ROS=-1.769 + 0.486 \cdot ISI $$
 
 ### [Fig3]
 
-```{r label=Fig3}
+```{r label=Fig3, echo=FALSE}
 #Show data, exceptions (CFC >0.1), PPDF orig. 
 Fig3 <- ggplot(s.fires3 %>% 
                  filter(!is.na(SFC)), #s.fires3
@@ -640,7 +644,7 @@ sf.lin.isi <- lm(ROS~ISI, data=s.fires.con)
 
 ```
 
-```{r Dewdrop large WFC, echo=FALSE}
+```{r label=DewdropLargeWFC, echo=FALSE}
 #difference between Stocks' sites and Dewdrop:
 stockssfc <- filter(fd.all, num %in% c(sharp, kenshoe)) %>%
   filter(num !=40 & num !=24) %>% pull(SFC)
@@ -728,7 +732,7 @@ $$ [B1], where *C* is the percent curing (as per FCFDG 1992), and *GB~D~* and *G
 
 ### Model forms
 
-We tested models with various combinations of of predictors, though most model forms using more than one or two predictors were non-significant owing to the modest number of observations and high variability. The best results were obtained using combinations with *ISI* or *ISI~sa~*, as linear or squared terms. Most models were forced through the origin due to the known lack of fire spread potential during high moisture conditions (e.g. ISI \< 2) and the importance of models that would performed logically across the full range of possible wildfire conditions.
+We tested models with various combinations of predictors. Most model forms using more than one or two predictors were non-significant owing to the modest number of observations and high variability. The best results were obtained using combinations with *ISI* or *ISI~sa~*, as linear or squared terms. Most models were forced through the origin due to the known lack of fire spread potential during high moisture conditions (e.g. ISI \< 2) and the importance of models that would performed logically across the full range of possible wildfire conditions.
 
 ### [Table 1: Model summary]
 
@@ -737,7 +741,8 @@ We tested models with various combinations of of predictors, though most model f
 
 #add sros.st, 
 mod.list.long <- list(sf.lin.isi,  
-              con.lm.mod, 
+              con.lm.mod,
+              sros.ws2.mod,
               sros.ISI2.mod,
               sros.ISI2SFC.mod,
               sros.isim2.mod,
@@ -753,7 +758,8 @@ mod.list.long <- list(sf.lin.isi,
               sf.d1)
 
 modnames <-c('isi.lin',
-              'isim2.con', 
+              'isim2.con',
+              'WS2.agg',
               'ISI2.agg',
               'ISI2SFC.agg',
               'isim2.agg',
@@ -800,6 +806,8 @@ acc.table3 <- left_join(acc.glance2, acc.table2,
 
 #ROS table at ISI (ISIm)=5, 10, 15
 isi.vals=c(5, 10, 15)
+ffmc.val=91
+ws.vals=c(1, 14, 22)
 mod.order.isim<- c(1, 4, 7, 10)
 
 #create blank list
@@ -811,6 +819,8 @@ for (i in seq_along(mod.list)) {
                             newdata=
                               data.frame(ISI=isi.vals,
                                         isi.m=isi.vals,
+                                        FFMC=ffmc.val,
+                                        ws=ws.vals,
                                         SFC=1.5))
 }
 
@@ -827,6 +837,7 @@ pred2.df <- as.matrix(pred.df) %>%
 row.names(pred2.df) <- NULL
 colnames(pred2.df)[2:4] <- c('ISI.5', 'ISI.10', 'ISI.15' ) 
 
+#get c6, c4s, c3s d1 predictions
 v1 <- c6s(isi.vals)
 v2 <- sf.vw93i(isi.vals)
 v3 <- sf.vw93m(isi.vals)
@@ -836,7 +847,8 @@ v14vals <- data.frame(v1, v2, v3, v4) %>%
   as.matrix %>% t() %>%
   as.data.frame()
 
-predAdd.df <- data.frame(Model=modnames[12:15], 
+
+predAdd.df <- data.frame(Model=modnames[13:16], 
                          ISI.5=v14vals[,1] %>% round(2),
                          ISI.10=v14vals[,2] %>% round(2),
                          ISI.15=v14vals[,3] %>% round(2))
@@ -885,7 +897,7 @@ acc.tab4
 
 ```
 
-Table 1 shows some the parameters and evaluation metrics of some of the more useful models along with predictions from the previously described FBP-era models. As the table indicates, the datasets used varied from `r min(acc.tab4$nobs)` to `r max(acc.tab4$nobs)`. Models forms 1, 2, 10 and 11 used only the boreal conifer (pine and spruce surface fire) observations and had slightly better performance (higher Efron's r-squared, lower MAE and MAPE) than model fitted to the larger aggregated dataset. SFC of 1.5 kg m-2 was used to calculate ROS predictions for all models that include the sqrt(SFC) predictor. Note that some of the highest-ROS observations were from wildfire observations (rather than experimental burns). High influence observations, as identified by jackknife resampling ('nlstools' R package, v2.1; ref#), revealed the most influential observations in each model (fix##).
+Table 1 shows some the parameters and evaluation metrics of the more useful models along with predictions from the previously described Van Wagner models. As the table indicates, the datasets used varied from `r min(acc.tab4$nobs, na.rm=T)` to `r max(acc.tab4$nobs, na.rm=T)`. Models forms 1, 2, 11 and 12 used only the boreal conifer (pine and spuce surface fire) observations and had slightly better performance (higher Efron's r-squared, lower MAE and MAPE) than model fitted to the larger aggregated dataset. For the wind speed model (Model 3), we used FFMC of 91 to calculate the ISI values for the comparison table and SFC of 1.5 kg m^-2^ was used to calculate ROS predictions for all models that include the sqrt(SFC) predictor.
 
 The 'aggregated data' models included all observations except those with canopy fuel involvement, as noted previously, including the adjusted PPDF fires as well as fires in deciduous stands.
 
@@ -895,38 +907,74 @@ The 'aggregated data' models included all observations except those with canopy 
 ex.sfc.tab
 ```
 
-Table 2 shows extended ROS predictions for the two models with *ISI* (or *ISI~sa~*) and *SFC* predictors. Both models were fitted with a *sqrt(SFC)* term, which performed slightly better (*ISI*: adjusted R^2^=`r summary(sros.ISI2SFC.mod)$adj.r.squared %>% round(4)`); *ISI~sa~*: adjusted R^2^=`r summary(sros.isim2SFC.mod)$adj.r.squared %>% round(4)`) than an untransformed *SFC* term (*ISI*: `r summary(update(sros.ISI2SFC.mod, ~.-sqrt(SFC) + SFC) )$adj.r.squared %>% round(4)` ; *ISI~sa~*: `r summary(update(sros.isim2SFC.mod, ~.-sqrt(SFC) + SFC) )$adj.r.squared %>% round(4)` , respectively). As the table values indicate, the influence of SFC is greatest at low ISI (or ISIsa) values, and diminishes under higher ISI conditions.
+Table 2 shows extended ROS predictions for the two models with *ISI* (or *ISI~sa~*) and *SFC* predictors. Both models were fitted with a *sqrt(SFC)* term, which performed slightly better (*ISI*: adjusted R^2^=`r summary(sros.ISI2SFC.mod)$adj.r.squared %>% round(4)`); *ISI~sa~*: adjusted R^2^=`r summary(sros.isim2SFC.mod)$adj.r.squared %>% round(4)`) than an untransformed *SFC* term (*ISI*: `r summary(update(sros.ISI2SFC.mod, ~.-sqrt(SFC) + SFC) )$adj.r.squared %>% round(4)` ; *ISI~sa~*: `r summary(update(sros.isim2SFC.mod, ~.-sqrt(SFC) + SFC) )$adj.r.squared %>% round(4)` , respectively). As the table values indicate, the influence of SFC was highest at low *ISI* (or *ISI~sa~*) values, and diminished under higher ISI conditions.
 
 Comparing models overall, the best performance (lowest RMSE, MAE, MAPE; highest Efron's R-squared) was exhibited by the sigmoidal (Chapman-Richards) models using only the boreal pine and spruce observations: model 10, using *ISI*, and model 11, using *ISI~sa~*. Among the 'aggregated' models, including boreal deciduous and adjusted PPDF fires in addition to the boreal data, the models including ISI (or ISIsa) and sqrt(SFC) performed best overall.
 
-In addition, Table 1 compares the new models with the previously published FBP-era surface spread models (C6, D1, C3S, C4S). This demonstrates how the various models compare at ISI/ISIsa values of 5 – 15. It is apparent that models C3S and D1 are reasonably within the range (+/- 1 m min^-1^) of the 'aggregate' model predictions, while C6S and particularly C4S predict much higher ROS values than the empirically fitted models.
+In addition, Table 1 compares the new models with the previously published Van Wagner surface spread models (C6, D1, C3S, C4S). This demonstrates how the various models compare at ISI or ISI~sa~ values of 5 – 15. It is apparent that models C3S and D1 are reasonably within the range (+/- 1 m min^-1^) of the 'aggregate' model predictions, while C6S and particularly C4S predict much higher ROS values than the empirically fitted models.
 
-### [Figure 4.]
+### [Figure 4 and diagnostics]
 
-```{r label=Fig4}
+```{r label=Fig4, echo=FALSE}
+#Do nlstools jackknife resampling to identify overly influential obs
+#do this on crisiCon, crisimCon, 
+
+jack.crisiCon <- nlstools::nlsJack(sf.crisiCon.mod)
+#summary(jack.crisiCon)
+jack.crisimCon <-nlstools::nlsJack(sf.crisimCon.mod)
+#summary(jack.crisimCon)
+#crisiCon: rows 10, 28, 49, 51 (s.con2)
+#crisimCon: rows 10, 28, 51
+#num: 20, 68, 122, 125
+
+#for lm models, use broom::augment to run Cook's D
+#high influence: D >1, or 0.5, or 4/n
+cook.isim2sfc <- broom::augment(sros.isim2SFC.mod)
+cook.ISI2sfc <- broom::augment(sros.isim2SFC.mod)
+
+#cook.isim2sfc %>% top_n(.cooksd, n=10) %>% arrange(desc(.cooksd))
+#cook.ISI2sfc %>% top_n(.cooksd, n=10) %>% arrange(desc(.cooksd))
+#isim2sfc: rows 52, 28, 88, 60
+#num: 117, 68, 232, 204
+#ISI2sfc: rows 58, 28, 88, 59, 60
+
+
 fig4
+
 ```
 
-#fix.
+Figure 4 shows the surface ROS observations plotted by overall fuel type (boreal conifer, deciduous, or PPDF) and SFC against ISIsa, along with three of the fitted models: M6 (calculated at SFC=1.5 kg m^-2^), M8, and M11 (boreal conifer only). PPDF fires were adjusted to 95% curing conditions prior to fitting (original observations are shown in grey). Observations with a black centre are wildfires; the remainder experimental fires.
 
-Figure 5 shows the surface ROS observations plotted against wind speed, along with the Equation 5 sROS model at three estimated moisture content levels. Calculation of Cook's Distance (D~c~) identified one observation as particularly influential in the regression - the fastest sROS observation in the dataset, with D~c~= 0.530. This observation represented the initial surface fire under jack pine in the Gwatkin Lake wildfire ('GL-A'). Although it appears unduly influential, deleting this observation and refitting Equation 6 produced a model (Equation 6') with an only marginally altered slope coefficient (0.02097). Comparing the two models, Equation 6 predicts ROS for the GL-A observation (ws = 23.0, mc~SA~=7.22) of 11.3 m min^-1^, an underprediction of 5.8 % compared to observed ROS (12.0 m min^-1^); in contrast, Equation 6' predicts ROS of 10.5 m min^-1^, 0.8 m min^-1^ lower than the Equation 6 result.
+#### Influential observations
 
-#### Surface rate of spread
+Individual observations were evaluated for undue influence in the best models using Cook's Distance for linearized models (Models 5 and 7) and jackknife resampling for non-linear models ('nlstools' R package, v2.1; @baty2015). For non-linear models 11 and 12, observations were flagged when the difference between model parameters calculated with and without individual estimates, $\Delta$, was $\Delta>\frac {2 s} {\sqrt{n}}$, where *s* is the standard error of the parameter estimate and *n* is the sample size [@baty2015]. For linearized models, observations with Cook's D \> 0.1 were flagged as most concerning. High influence observations are shown in Figures 4 and 5 (#to do), consisting generally of high *ISI*/*ISI~sa~* and high ROS observations, particularly wildfires. Due to the lack of data at high fire danger conditions, there is no way of removing these observations without significantly altering the usable range of these models.
 
-In contrast to CFI models, the mc~SA~-based sROS model (using an ISI function based on mc~SA~) was not superior to the simple ISI-based model. This suggests that the mc~SA~ performance with the parameters we inferred and assigned was not universally superior to the simpler FFMC in capturing additional variation in our fire data. For its sensitivity to additional fire environment variables (density, DMC, species), the mc~SA~ based model may still have some advantages. Neither overstory genus (pine vs spruce) nor stand density were significant predictors of ROS on their own; however, the sROS model using ISI~SA~ incorporates the effects of stand density and DMC on mc~SA~, thereby providing some degree of influence of stand density on sROS via effects on estimated litter moisture. This is in line with findings from physical modelling studies that suggest, for instance, that thinning treatments can increase surface ROS via higher effective in-stand wind speed in more open stands [e.g., @parsons2018; @marshall2020].
+### [Fig 5]
 
-The major limitation of the sROS models and dataset are the paucity of observations at higher danger conditions (ws or ISI) and the aforementioned influence of the GL-A data point. The reconstruction of the Gwatkin Lake wildfire [@vanwagner1965; @hummel1979 ] suggested about 300 m of spread under a tall jack pine stand, scorching the pine crowns 12 m above while torching 'a few trees here and there' [@vanwagner1965], but generally qualifying as a surface fire spreading under 23 km h^-1^ winds. While we assumed that those inputs were reconstructed as accurately as possible, additional surface fire observations under high indices, necessarily with high LCBH and-or low SFC to avoid crowning, will help greatly to improve the accuracy and confidence in the surface ROS model. Some of the variability in the data is undoubtedly due to the varying canopy influence (including edge effects) on in-stand wind speed and turbulence, as previously discussed. These factors, potentially exacerbated by varying plot sizes, are not accounted in our models. The present sROS models appear crude, but will likely provide a useful first approximation decision support tool for fire managers based on real-world fire data. Surface ROS errors of 1-3 m min^-1^ or more should be expected in real-world use.
-
-## 
+```{r label=Fig5, echo=FALSE}
+fig5
+```
 
 ## 5. Discussion
 
+[#lots of cleanup and additional work needed here].
+
 Although the most relevant value related to wind velocity might be the mid-flame wind speed (as per [@rothermel1972]), the 10-m open wind speed is commonly measured at fire weather stations across Canada and internationally [@Lawson.Armitage2008], and avoids the major challenge of in-stand wind speed modelling. We tested other associated forest structure variables, including canopy closure class, FSG, and ignition line exposure, in order to account for wind reduction between 10-m open conditions and flame-level (\~1 m) sub-canopy conditions.
 
-While physical fire spread models attempt to represent heat transfer and combustion processes, empirical and
+While physical fire spread models attempt to represent heat transfer and combustion processes, empirical and semi-empirical models are much easier and quicker to use and learn, and therefore preferable for operational fire predictions. The FBP System initially relied on categorical fuel types. While existing fuel types remain useful constructs, selecting the best-fit fuel type can sometimes present a subjective and challenging dilemma, where structural attributes can present a conflicting picture and fail to represent observed fire behaviour [@perrakis2018a; @baron2024]. A switch to continuous fuel attributes (rather than fuel types) presents a greater range of options. For instance, black spruce stands with a higher crown base [e.g., @Thompson.etal2020; @wilkinson2018a] may support surface fire at higher danger levels than suggested by the best FBP System categorical fuel type (i.e., C-2; @forestrycanadafiredangergroup1992a). However, differentiating surface fire behaviour between specific conifer fuel types is not possible at this time. The variability in factors such as understory vegetation, shrub cover, and tree density suggest that considerable variability is expected between individual sites, in addition to between overall fuel or vegetation types (overstory and understory). Our findings suggest that boreal and sub-boreal pine and spruce fuel types can be aggregated for this purpose, provided precise prediction accuracy is not required or expected.
 
-One question is possibly most important for operational use: are these models credible, and would they be reasonably effective (+/- 50 %) for predicting fire spread within and outside the data range? We have already established that extreme conditions (e.g., ISI \> 20) are associated with crown fire behaviour in most stands, demanding a different set of models. Extreme conditions in conifer forests where surface fire behaviour is expected (and appropriate models were needed) might be associated with very high canopy structure (e.g., LCBH \> 10 m), such as in a mature pine or Douglas-fir stand, possibly together with fuel treatment work to remove smaller trees and other ladder fuels (e.g. Fig. x [pic. from Sooke - moderate stand, LCBH of 13-15 m]). Alternatively, high danger conditions (not extreme), including ISI values of \~10-15 would be a more common concern for sROS models.
+#### Using final surface rate of spread models
 
-Under very low danger conditions (e.g., FFMC \< 70 or ISI \< 1), ignition in needle fuel substrates becomes highly unlikely [@beverly2007], so ROS is a minimal concern.
+Four models shown here stand out as superior: Models 11 and 12, for boreal/sub-boreal conifer stands, and Models 5 and 7, somewhat more fuel type independent. Models 5 and 11 use the traditional ISI measure, based on open wind speed and the FFMC, while Models 7 and 12 take advantage of the additional flexibility of the Wotton and Beverly [-@wotton2007] stand-adjusted litter moisture model and the *ISI~sa~* index introduced here. Neither overstory genus (pine vs spruce) nor stand density class variables were significant predictors of ROS in any models on their own; however, the models using *ISI~sa~* incorporate effects of stand density and DMC indirectly via their influence on fuel moisture (the mc~sa~). This is in line with findings from physical modelling studies that suggest, for instance, that thinning treatments can increase surface ROS via higher effective in-stand wind speed in more open stands [e.g., @parsons2018; @marshall2020].
+
+The major limitation of the sROS models and dataset are the paucity of observations at higher danger conditions (ws or ISI) and the importance of various low-confidence data points. The reconstructions of various wildfires [@vanwagner1965; @hummel1979; @VanWagner1973a] will necessarily result in less accurate ROS observations, including estimated predictors, than those from experimental fires. While we assumed that these observations were reconstructed as accurately as possible by experienced personnel, there is no substitue for additional surface fire observations. Those spreading under high indices, necessarily with high LCBH and-or low SFC to avoid crowning, will help greatly to improve the accuracy and utility of surface ROS models. Some of the variability in the data is undoubtedly due to the varying canopy influence (including edge effects) on in-stand wind speed and turbulence, as previously discussed. These factors, potentially exacerbated by varying plot sizes, are not accounted in our models. The present sROS models appear crude, but will likely provide a useful first approximation decision support tool for fire managers based on real-world fire data. Surface ROS errors of 1-2 m min^-1^ should be expected below ISI (or ISI~sa~) 10; and larger errors of perhaps 2-5 m min^-1^ (occasionally more) may be encountered in real world use between *ISI* / *ISI~sa~* 10 and 25. Use of these models above ISI 25 involves extrapolation and should be undertaken only with great caution
+
+[cut?# One question is possibly most important for operational use: are these models credible, and would they be reasonably effective (+/- 50 %) for predicting fire spread within and outside the data range? We have already established that extreme conditions (e.g., ISI \> 20) are associated with crown fire behaviour in most stands, demanding a different set of models. Extreme conditions in conifer forests where surface fire behaviour is expected (and appropriate models are needed) might be associated with very high canopy structure (e.g., LCBH \> 10 m), such as in a mature pine or Douglas-fir stand, possibly together with fuel treatment work to remove smaller trees and other ladder fuels (e.g. Fig. x [pic. from Sooke - moderate stand, LCBH of 13-15 m]). Alternatively, high danger conditions (not extreme), including ISI values of \~10-15 would be a more common concern for sROS models in more typical conifer stands. ]
+
+Under very low danger conditions (e.g., FFMC \< 75 or ISI \< 1), ignition in needle fuel substrates becomes highly unlikely [@beverly2007], so ROS is a minimal concern.
+
+Other researchers have developed surface fire spread models usable in conifer forest litter, typically using empirical or semi-empirical approaches based on laboratory experiments[e.g., @rothermel1972; @rossa2018]. Australian models?# Log-transformation common, but seemed unhelpful with present small and variable dataset.
 
 It is expected that the quality and quantity of source data will improve over time, allowing for periodic reanalysis and improvement of these models.
+
+## 6. References
