@@ -272,8 +272,10 @@ sf.d1 <- function(isi) {
 
 #fit Chapman-Richards function to surface fire data
 #This will be prediction model going forward
+a.value <- 20 
+
 sf.crisim.mod <- nls(data=s.fires.mod, formula= 
-               ROS ~ 25 * (1-exp(-b*isi.m))^c, 
+               ROS ~ a.value * (1-exp(-b*isi.m))^c, 
                start=list(b=0.08, c=3))
 
 
@@ -284,7 +286,7 @@ sf.crisim.fun <- function(isim) {
   
 #Using ISI
 sf.crisi.mod <-nls(data=s.fires.mod, formula= 
-               ROS ~ 25 * (1-exp(-b*ISI))^c, 
+               ROS ~ a.value * (1-exp(-b*ISI))^c, 
                start=list(b=0.1, c=3))
 
 #CR nls function using ISI
@@ -298,7 +300,7 @@ s.con <- s.fires.mod %>% filter(FT=='Con')
 
 sf.crisiCon.mod <-nls(data=s.con, 
                 formula= 
-               ROS ~ 25 * (1-exp(-b*ISI))^c, 
+               ROS ~ a.value * (1-exp(-b*ISI))^c, 
                start=list(b=0.1, c=3))
 
 sf.crisiCon.fun <- function(isi) {
@@ -308,7 +310,7 @@ sf.crisiCon.fun <- function(isi) {
 #isi.m
 sf.crisimCon.mod <-nls(data=s.con, 
                 formula= 
-               ROS ~ 25 * (1-exp(-b*isi.m))^c, 
+               ROS ~ a.value * (1-exp(-b*isi.m))^c, 
                start=list(b=0.1, c=3))
 
 sf.crisimCon.fun <- function(isim) {
@@ -547,7 +549,7 @@ Previous studies have suggested that wind speed at the ground or flame height le
 
 ### Fire database
 
-The Canadian experimental fire database was the primary source of surface fire observations. As previously described, varying sizes of square or rectangular plots were ignited from an exposed windward edge using line ignition techniques. We used the surface fire data to fit empirical rate of spread (ROS) models based on the fire environment variables. Consistent with the established theoretical understanding of surface fire spread [@curry1940; @Campbell-Lochrie.etal2021] and the majority of existing empirical models [@fernandes2009; @sullivan2009], we focused on wind speed and fuel moisture content as primary variables of interest. Our starting point for operational models was the Initial Spread Index (ISI) [@vanwagner1987] that combines these two factors according to the Fire Weather Index (FWI) and FBP System conventions [@forestrycanadafiredangergroup1992a; @cfsfiredangergroup2021]. Variables including fuel type and surface fuel consumption were also examined.
+The Canadian experimental fire database was the primary source of surface fire observations. As previously described, varying sizes of square or rectangular plots were ignited from an exposed windward edge using line ignition techniques. Only fires identified as surface fires were selected, and we fitted regression models of rate of spread (ROS) to various fire environment variables. Consistent with longstanding theoretical understanding [@curry1940; @Campbell-Lochrie.etal2021] and the majority of existing empirical models [@fernandes2009; @sullivan2009], we focused on wind speed and fuel moisture content as primary variables of interest. Our starting point for operational models was the Initial Spread Index (ISI) [@vanwagner1987] that combines these two factors according to the Fire Weather Index (FWI) power function, as established in the Canadian FBP System [@forestrycanadafiredangergroup1992a]. Other variables of potential interest including fuel type and surface fuel consumption were also examined for significance. For modelling, we tested linear regression forms with linear and quadratic predictors, as well as sigmoidal and power-law non-linear forms.
 
 ### Spread index variables
 
@@ -557,11 +559,11 @@ For modelling surface ROS, we sought to maintain the single variable utility of 
 
 $$ ISI_{sa}=0.208\cdot (e^{0.05039\cdot ws}) \cdot (91.9 \cdot e^{-0.1386\cdot mc}) \cdot \left[ 1+\frac{mc^{5.31}}{(4.93\cdot 10^7)}) \right]  $$ [5], with *ws* representing the 10 metre open wind speed and *mc* representing mc~SA~ in this case.
 
-To test for novel influences, we tested *ws*, *FFMC*, *mc~sa~*, *DMC*, *ISI*, *ISI~sa~*, *SFC*, fuel type, and stand density class predictor variables . We first calculated transformed terms for several of these: *ws^2^*, *ISI^2^*, *ISI~sa~^2^*, *SFC^2^*, and *sqrt(SFC)*, and tested all variable combinations (1-4 predictors) using the 'leaps' package in R (ref#). We also tested for a non-linear response using the sigmoidal Chapman-Richards form previously described, using *ISI* or *ISI~sa~* and *SFC*. All analyses were performed in RStudio 2024.04 (Posit Software, Boston, MA, USA) with R version 4.2.1.
+To test for novel influences, we tested *ws*, *FFMC*, *mc~sa~*, *DMC*, *ISI*, *ISI~sa~*, *SFC*, fuel type, and stand density class predictor variables . We first calculated transformed terms for several of these: *ws^2^*, *ISI^2^*, *ISI~sa~^2^*, *SFC^2^*, and *sqrt(SFC)*, and tested all variable combinations (1-4 predictors) using the 'leaps' package in R (ref#). We also tested for a non-linear response using the sigmoidal Chapman-Richards form previously described, using *ISI* or *ISI~sa~* and *SFC*, as well as the $\alpha X ^{\beta}$ form. All analyses were performed in RStudio 2024.04 (Posit Software, Boston, MA, USA) with R version 4.2.1.
 
-A small number of fires were located in Ponderosa pine- Douglas-fir (PPDF) stands in British Columbia, with a mixed litter and open grass understory (see Box 1). Due to the importance of grass moisture in these stands [@agee2006], we incorporated grass curing effects into the analysis. This involved adjusting the ROS observations to normalize all observations to a nearly fully cured understory grass condition (95 % C), following Cheney and Gould [-@cheney1995]. Although the grass biomass in these stands only represented a fraction of the total available surface fuel, we made the assumption that grass curing would influence ROS half as much (50 %) as it would was compared with a true grassland; the moisture content of the remaining surface fuel - forest litter and woody debris - would not be affected by seasonal grass curing, of course. The new adjusted 'fully curing' ROS (*ROS'*) was computed using the following equation:
+A small number of fires were located in Ponderosa pine- Douglas-fir (PPDF) stands in British Columbia, with a mixed litter and open grass understory (see Box 1). Due to the disproportionate importance of grass moisture in these stands [@agee2006; @youngblood2008], we incorporated grass curing effects into the analysis. This involved adjusting the ROS observations to normalize all observations to a nearly fully cured understory grass condition (95 % C), following Cheney and Gould [-@cheney1995]. Although the grass biomass in these stands only represented a fraction of the total available surface fuel, we made the assumption that grass curing would influence ROS half as much (50 %) as it would was compared with a true grassland; the moisture content of the remaining surface fuel – forest litter and woody debris – would not be affected by seasonal grass curing, of course. The new adjusted 'fully curing' ROS (*ROS'*) was computed using the following equation:
 
-$$ ROS'=\frac {ROS_0}{2} + \frac {ROS_0}{2} \cdot \frac {cf(95)} {cf(C)} ) $$[6], where *ROS~0~* represents the observed rate of spread with measured curing *C*, *cf(95)* represents the calculated curing factor at 95% C [@wotton2009] and *cf(C)* represents the curing factor of measured % C values (see Box 1). The *ROS'* values for these seven fires were then used in fitting the 'aggregate' model analyses (PPDF fire were excluded from the boreal conifer models).
+$$ ROS'=\frac {ROS_0}{2} + \frac {ROS_0}{2} \cdot \frac {cf(95)} {cf(C)} ) $$[6], where *ROS~0~* represents the observed rate of spread with measured curing *C*, *cf(95)* represents the calculated curing factor at 95% C [@wotton2009] and *cf(C)* represents the curing factor of measured % C values (see Box 1). The *ROS'* values for these seven fires were then used in fitting the 'aggregate' model analyses, while PPDF fires were excluded from the boreal conifer models.
 
 ### 
 
