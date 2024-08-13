@@ -614,34 +614,11 @@ sf.lin.ws <- lm(ROS ~ ws, data=fd.ros %>% filter(FiT2=='S'))
 
 ```{r label=m.25percent, echo=FALSE }
 
-m25 <- function(ws) {
-  ROS=0.25 * ws
-  return(ROS)}
-
-#I think everything below related to m25 will be deleted...
-
 #get fit of 'twenty five percent' model:
 df.m25 <- fd.ros %>% filter(FiT2=='S') %>% 
   select(ws, ROS) %>% 
-  mutate(manual25 = 0.25 * ws,
-         manual.resid = ROS-manual25)
-
-rss.manual <- sum(df.m25$manual.resid^2)
-tss.manual <- sum((df.m25$ROS-mean(df.m25$ROS))^2)
-#manual r-squared
-m25.rsquared <- 1-(rss.manual/tss.manual)
-
-##########From Perplexity
-# Create a custom lm object with fixed coefficients
-df.m25 <- select(df.m25, 1:2) %>% tibble()
-
-#call fixed_lm function
-#call summary.fixed_lm function
-#call print.summary.fixed_lm function
-#call m25 <- fixed_lm(ROS ~ ws, data = df.m25, slope = 0.25)
-
-m25.perp <- fixed_lm(ROS ~ ws, data = df.m25, slope = 0.25)
-#perplexity function...not useful I think
+  mutate(pred25 = 0.25 * ws,
+         manual.resid = ROS-pred25)
 
 fig2
 ```
@@ -784,7 +761,8 @@ Further model testing included the terms and combinations previously noted. Most
 #Model list
 
 #add sros.st, 
-mod.list.long <- list(sf.lin.isi,
+mod.list.long <- list(sf.lin.ws,
+              sf.lin.isi,
               con.ISI.mod,
               con.lm.mod,
               sros.ws2.mod,
@@ -803,7 +781,8 @@ mod.list.long <- list(sf.lin.isi,
               sf.vw93m,
               sf.d1)
 
-modnames <-c('isilin.con',
+modnames <-c('wslin.con',
+             'isilin.con',
              'ISI2.con',
               'isim2.con',
               'WS2.agg',
@@ -816,7 +795,7 @@ modnames <-c('isilin.con',
               'axb.isi.agg',
               'crisi.con',
               'crisim.con',
-             '25 perc',
+             '25 per',
              'c6s', 'c4s', 'c3s', 'd1')
 
 #models only (not functions)
@@ -827,7 +806,8 @@ formulae <- lapply(mod.list, FUN=formula) %>%
   as.character() %>%
   str_extract(pattern="~(.*)") %>% #keep everything right of the tilde
   str_remove('~ ') %>% #get ride of the tilde
-  append(c(  #add the Van Wagner models at the end
+  append(c(  #add the manual and Van Wagner models at the end
+    '0.25 * ws',
     '30 * (1-exp(-0.08*ISI))^3',
     '20 * (1-exp(-0.2*ISI))^5',
     '15 * (1-exp(-0.05*ISI))^2',
@@ -835,7 +815,8 @@ formulae <- lapply(mod.list, FUN=formula) %>%
 
 #generate table of evaluation metrics
 #MAE, MAPE, MSE
-acc.table2 <- rcompanion::accuracy(mod.list) %>% as.data.frame() %>%
+acc.table2 <- rcompanion::accuracy(mod.list) %>% 
+  as.data.frame() %>%
   mutate(num=1:length(mod.list))
 
 #get AIC, num of obs - repeat glance function across all models
@@ -846,6 +827,16 @@ acc.glance2 <- lapply(acc.glance, `[`, c('nobs', 'AIC' )) %>%
   list_rbind() %>% round(1) %>%
   mutate(num=1:length(acc.glance))
 
+#metrics for m25:
+#mae.manual(actual=df.m25$ROS, pred=df.m25$pred25) # etc.
+df.line.m25 <- tibble(num=15, Model='25 perc', 
+                          nobs=NA, RMSE=NA,
+         MAE=mae.manual(actual=df.m25$ROS, pred=df.m25$pred25),
+         MAPE=mape.manual(actual=df.m25$ROS, pred=df.m25$pred25),
+         EfronR2=ef.r.squared(actual=df.m25$ROS, 
+                              pred=df.m25$pred25)
+  )
+
 #combine the two evaluation tables, clean up
 acc.table3 <- left_join(acc.glance2, acc.table2, 
                         by='num') %>%
@@ -855,7 +846,9 @@ acc.table3 <- left_join(acc.glance2, acc.table2,
          RMSE=Fit.criteria.RMSE,
          EfronR2=Fit.criteria.Efron.r.squared
         ) %>%
-  select(num, Model, nobs, RMSE, MAE, MAPE, EfronR2, AIC)
+  select(num, Model, nobs, RMSE, MAE, MAPE, EfronR2, AIC) %>%
+  #add 25 % mod
+  bind_rows(df.line.m25)
 
 #ROS table at ISI (ISIm)=5, 10, 15
 isi.vals=c(5, 10, 15)
@@ -865,7 +858,7 @@ mod.order.isim<- c(1, 4, 7, 10)
 
 #create blank list
 pred.list <- vector('list', length(mod.list))
-names(pred.list) <- modnames[1:(length(modnames)-4)]
+names(pred.list) <- modnames[1:(length(modnames)-5)]
 
 for (i in seq_along(mod.list)) {  #predict all mods in mod.list
   pred.list[[i]] <- predict(mod.list[[i]], 
@@ -952,9 +945,9 @@ ex.sfc.tab
 
 ### Final fitted models
 
-Table 1 shows the predictors and evaluation metrics for the list of fitted models, as well as *ROS* predictions at three levels (5, 10, 15) of *ISI* or *ISI~sa~*. Other variables (FFMC, SFC) were assigned constant values where needed for calculation purposes, as noted. These models can be also be compared with predictions from the previously described Van Wagner and FBP surface fire models (Table 1). As the table indicates, the datasets used varied from `r min(acc.tab4$nobs, na.rm=T)` to `r max(acc.tab4$nobs, na.rm=T)` observations. Models forms 1–3 and 12–13 used only the boreal conifer (pine and spuce surface fire) observations, and had slightly better performance (higher Efron's r-squared, lower MAE and MAPE) than models fitted to the larger aggregated dataset (Models 4 – 11). For the two models that include *sqrt(SFC)* as a covariate, Table 2 shows predictions using other SFC values; the SFC influence is greatest at low ISI or ISI~sa~ levels, and is minimal by ISI 15. Non-linear model forms using the sigmoidal Chapman-Richards form had insufficient data ('nls' function failed to converge) to automatically fit the *a* parameter; it was set to 20 following the Van Wagner C4s model.
+Table 1 shows the predictors and evaluation metrics for the list of fitted models, as well as *ROS* predictions at three levels (5, 10, 15) of *ISI* or *ISI~sa~*. Other variables (FFMC, SFC) were assigned constant values where needed for calculation purposes, as noted. These models can be also be compared with predictions from the previously described Van Wagner and FBP surface fire models (Table 1). As the table indicates, the datasets used varied from `r min(acc.tab4$nobs, na.rm=T)` to `r max(acc.tab4$nobs, na.rm=T)` observations. Models forms 1–3 and 12–13 used only the boreal conifer (pine and spruce surface fire) observations, and had slightly better performance (higher Efron's r-squared, lower MAE and MAPE) than models fitted to the larger aggregated dataset (Models 4 – 11). For the two models that include *sqrt(SFC)* as a covariate, Table 2 shows predictions using other SFC values; the SFC influence is greatest at low ISI or ISI~sa~ levels, and is minimal by ISI 15. Non-linear model forms using the sigmoidal Chapman-Richards form had insufficient data ('nls' function failed to converge) to automatically fit the *a* parameter; it was set to 20 following the assumed value for Van Wagner's C4s model (Van Wagner 1993).
 
-The 'aggregated data' models included all surface fire observations except those with canopy fuel involvement, as noted previously. This includes fires in deciduous stands of aspen (29 observations), oak (2), or mixedwood (1) as well as seven PPDF fires. Six deciduous fires took place in the US . Boreal conifer models used only fires in jack pine (, black spruce, jack pine/black spruce, red pine, lodgepole pine, and red pine/white pine [@perrakis2023].
+The 'aggregated data' models included all surface fire observations except those with canopy fuel involvement, as noted previously. This includes fires in deciduous stands of aspen (29 observations), oak (2), or mixedwood (1) as well as seven PPDF fires. Six deciduous fires took place in the northeastern US, the remainder in Canada. Boreal conifer models used only fires in jack pine, black spruce, jack pine/black spruce, red pine, lodgepole pine, and red pine/white pine [@perrakis2023].
 
 ### [Table 2: Extended SFC predictions]
 
