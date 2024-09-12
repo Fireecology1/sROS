@@ -1193,45 +1193,6 @@ pred1 %>%
   group_by(isi.m < 12, ROS < pred9) %>%
   summarize(mae=mean(diff), qae=quantile(diff, 0.9))
 
-#think I can delete all this now.....
-overpred.lo1 <- pred1 %>% 
-  filter(isi.m < 12) %>%
-  mutate(diff=pred9-ROS) %>% filter(diff > 0) %>% pull(diff)
-
-overpred.hi1 <- pred1 %>%
-  filter(isi.m >=12) %>%
-  mutate(diff=pred9-ROS) %>% filter(diff > 0) %>% pull(diff)
-
-underpred.lo1 <- pred1 %>%
-  filter(isi.m < 12) %>%
-  mutate(diff=ROS-pred9) %>% filter(diff > 0) %>% pull(diff)
-
-underpred.hi1 <- pred1 %>%
-  filter(isi.m >= 12) %>%
-  mutate(diff=ROS-pred9) %>% filter(diff > 0) %>% pull(diff)
-
-#crisi.con
-pred2 <- broom::augment(sf.crisiCon.mod) %>% 
-  select(ROS, ISI, .fitted) %>%
-  rename(pred13=.fitted)
-
-overpred.lo2 <- pred2 %>% 
-  filter(ISI < 12) %>%
-  mutate(diff=pred13-ROS) %>% filter(diff > 0) %>% pull(diff)
-
-overpred.hi2 <- pred2 %>%
-  filter(ISI >=12) %>%
-  mutate(diff=pred13-ROS) %>% filter(diff > 0) %>% pull(diff)
-
-underpred.lo2 <- pred2 %>%
-  filter(ISI < 12) %>%
-  mutate(diff=ROS-pred13) %>% filter(diff > 0) %>% pull(diff)
-
-underpred.hi2 <- pred2 %>%
-  filter(ISI >= 12) %>%
-  mutate(diff=ROS-pred13) %>% filter(diff > 0) %>% pull(diff)
-
-
 
 #quantile(overpred, 0.9)
 ```
