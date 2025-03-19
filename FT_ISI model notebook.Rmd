@@ -1,0 +1,117 @@
+---
+title: "Different ISI-fuel type sROS models"
+output: 
+  word_document: 
+    fig_width: 6.3
+    fig_height: 6.3
+---
+
+```{r echo=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE,root.dir = 'c:/Dan/_Remote_projects/ccp-sROS')
+
+library(dplyr)
+library(ggplot2)
+# 
+# #get data, models
+# sf.ftisi <- load(file='C:/Dan/_Remote_projects/ccp-sROS/files/sf_ftisi.rda')
+# ft.isi.fun <- load(file='C:/Dan/_Remote_projects/ccp-sROS/files/ftisi_fun.rda')
+# s.fires.mod <- read.csv('C:/Dan/_Remote_projects/ccp-sROS/files/sfires_mod.csv')
+# s.fires3 <- read.csv('C:/Dan/_Remote_projects/ccp-sROS/files/sfires3.csv')
+# 
+# wildfires <- filter(s.fires3, 
+#                     num %in% c(68, 69, 76, 125, 232)) %>%
+#   mutate(FT='WF')
+load(file='c:/Dan/_Remote_projects/ccp-sROS/files/sessionImgOct2024')
+
+fig5 <- ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+       aes(x=ISI, y=ROS)) + 
+    scale_colour_manual(values=c(
+    'red2',
+    'green3',
+    'blue4')) +
+  geom_point(aes(colour=FT, size=SFC), alpha=0.5) +    
+  geom_point(data=s.fires3 %>% filter(FT=='PPDF'), aes(size=SFC), shape=21, size=4, fill='darkgray', alpha=0.5) + #PPDF original
+  geom_point(data=wildfires, colour='black', fill='black', size=1,              shape=21) + #wildfires
+  stat_function(fun=sf.crisiCon.fun, color='gray') +  
+  stat_function(fun=c4s, color='turquoise', linetype='dashed') +
+  stat_function(fun=c3s, color='purple', linetype='dashed') +
+  stat_function(fun=c6s, color='darkred', linetype='dashed') +
+  theme_classic()
+
+```
+
+Steve- I would love your thoughts on this.
+
+A relatively simple model fitted to ISI or ISI2 was also sensitive to fuel type (between boreal/sub-boreal conifer, deciduous, or adjusted ponderosa pine-Douglas-fir). Note that the PPDF fires here were adjusted to a 'near fully-cured' condition (95% C), with the assumption that the ROS would be 50% affected by the curing factor compared with pure grassland.
+
+I have some graphs with C-3s, C-4s (CEVW models from his 1993 paper), and C-6s (STX-3) models shown because they will probably be in the paper, but you can just ignore those.
+
+Here are the options and statistics:
+
+First - a linear model, with an interaction term:
+
+```{r}
+summary(sf.ftisi)
+
+emmeans_out <-emmeans::emmeans(sf.ftisi, ~FT)
+multcomp::cld(emmeans_out, alpha=0.05, Letters=letters)
+
+fig5format <- fig5 + 
+  geom_text(x=10, y=c4s(10)+3, label='C-4s', colour='turquoise') +
+  geom_text(x=25, y=ft.isi.fun(25)+1, label=lab4) +
+  geom_text(x=24, y=c3s(24)-1, label='C-3s', colour='purple') +
+  geom_text(x=26, y=sf.crisiCon.fun(26)+1.2, label=lab5, colour='gray')+
+  geom_text(x=15, y=c6s(15)+1.5, label='C-6s', colour='darkred') +
+  labs(x='ISI', y='ROS (m/min)') +
+  theme(legend.position='none')
+#  geom_point(data=d1.missing, inherit.aes=TRUE)
+
+fig5format +
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='Con', mod=1), color='red2') + #M15 FT mod
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='PPDF', mod=1), color='blue4') + #M15 FT 
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='Decid', mod=1), color='green3')  #M15 FT
+
+```
+
+Next, a squared ISI term with no ISI-FT interaction:
+
+```{r}
+summary(sf.ftisi2)
+
+emmeans_out <-emmeans::emmeans(sf.ftisi2, ~FT)
+multcomp::cld(emmeans_out, alpha=0.05, Letters=letters)
+
+fig5format +
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='Con', mod=2), color='red2') + #M15 FT mod
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='PPDF', mod=2), color='blue4') + #M15 FT 
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='Decid', mod=2), color='green3')  #M15 FT
+
+```
+
+That one, in my view, seems to do a nice job for Deciduous and PPDF. It is much less convincing for the boreal conifer stands (which were NS different from Decid.).
+
+Finally, the squared ISI with ISI-FT interaction model:
+
+```{r}
+summary(sf.ftisi3)
+
+emmeans_out <-emmeans::emmeans(sf.ftisi3, ~FT)
+multcomp::cld(emmeans_out, alpha=0.05, Letters=letters)
+
+fig5format +
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='Con', mod=3), color='red2') + #M15 FT mod
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='PPDF', mod=3), color='blue4') + #M15 FT 
+  stat_function(fun=ft.isi.fun, args=list(
+    ft='Decid', mod=3), color='green3')  #M15 FT
+
+```
+
+That one looks great for boreal conifer and Deciduous stands. It also does a nice job representing the PPDF fires that we have. I feel like it doesn't necessarily represent how fast we think surface fires in PPDF stands will spread under higher ISI conditions, but I guess that's debatable. I suppose none of this is

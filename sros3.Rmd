@@ -870,27 +870,6 @@ The influence of conifer fuel type (FT) was only significant when combined with 
 
 Most model forms using more than one or two predictors were non-significant ($\alpha=0.05$) owing to the modest sample size and high variability. Stand density class was not significant in any models.
 
-### [Box 1] Fires in Ponderosa Pine-Douglas-fir stands in BC
-
-Seven\* experimental fires were conducted in open Ponderosa pine-Douglas-fir forest stands in the Dewdrop Range near Kamloops, British Columbia, in 1978-79. These fires were documented in theses by Nyberg[@Nyberg1979] and Smaill [@Smaill1980], while summary information and photos were incorporated into the FBP System C-7 fuel type [@forestrycanadafiredangergroup1992; @DeGroot1993]. In the FBP System database, surface fuel consumption (SFC) was reported for only one observation (Plot 9), with a very high total SFC value of 5.3 kg m^-2^, including \> 5 kg m^-2^ of woody fuel consumption.
-
-Original copies of these documents were reanalyzed in order to better describe these fires and improve the modelling database. Stand structure at Dewdrop consisted of a low density overstory and mostly herbaceous understory; mean canopy closure was 27.2 %. Litter and duff cover were described as patchy to nonexistent [@Nyberg1979].
-
-The original SFC estimate for Plot 9 included consumption of all downed woody fuels, including from large diameter coarse woody debris (CWD; \> 7.6 cm). While methodologically consistent with other FBP experimental burns [@stocks1987b; @stocks1989], the Plot 9 CWD consumption represents the great majority of the total SFC and represents an outlier compared to other experiments. For instance, the mean CWD proportion of SFC at the Ontario Kenshoe Lake and Sharpsand Creek sites was 9.2 % [c.f. @stocks1987b; @stocks1989], compared with 50.2 % at Dewdrop (Mann-Whitney U-test: p \< 0.001). The difference is accounted by both higher seasonal drought conditions during the Dewdrop burns (mean Drought Code (DC): 394 at Dewdrop vs 111 at Kenshoe Lake and 161 at Sharpsand; see @vanwagner1987 for DC description), and probably the overall frequency of larger diameter trees at Dewdrop (\> 17 % of trees in the '\>25 cm' DBH class; cf. [@Nyberg1979]); compared with other sites (e.g., \~ 1 % of trees in the '\> 23 cm' DBH class at Kenshoe Lake ('White River'); [@walker1975]).
-
-Including contributions from CWD in surface fires is also at odds with current understanding of flame front dynamics. Consumption studies suggest that most CWD consumption in PPDF stands occurs during post-frontal smoldering rather than during flaming combustion [@monsanto2008; @brown2003; @ottmar2014]. The high SFC at Dewdrop from CWD therefore could overpredict fire intensity and crown fire tendency [@vanwagner1977; @perrakis2023]. To compensate, new SFC values at Dewdrop were calculated excluding the CWD contribution. Including only consumption from finer fuels (grass and herbs, litter, duff, and woody debris \< 7.6 cm) resulted in a recalculated (notably lower: 2.01 kg m^-2^) value for Plot 9.\*\* SFC values calculated using the same methods for Plots 1-6 were 0.47 – 1.39 kg m^-2^.
-
-Another feature of interest was the summer weather pattern and understory condition during these fires. The 1978 season was described as unusually wet, with measurable rainfall received at the Dewdrop site nearly weekly from April-August [@Nyberg1979], an unusual occurrence in this summer-dry climate. Consequently, understory vegetation remained relatively green during the experimental fires. Relative proportions of live and dead grass and forb biomass were used to calculate percent curing values (% C) in the same manner as used in Australian and Canadian grass fire models [@cheney1998; @wotton2009]:$$\% C = \frac {GB_D} {(GB_D + GB_L)} \cdot 100
-$$ [B1], where % *C* is the percent curing, and *GB~D~* and *GB~L~* represent dead and live grass and forb biomass (kg m^-2^), respectively. Using mean values from experimental and control plot sampling on each given date (Nyberg 1979) gave % *C* values of 56-66 for Plots 1-6. For Plot 9, reported values are unfortunately less explicit between live and dead biomass [@Smaill1980] and eq. B1 could not be used. Based on the slightly lower overall grass moisture value (22.7 %) and late season date, % C for that plot was estimated at 80%.
-
-These analyses allowed us to incorporate the Dewdrop experimental fires in our surface fire models (aggregated fuels), even though they stood apart from the primarily boreal conifer and deciduous experiments.
-
-\*Plot numbers 1–6, burned in 1978, are described by [@Nyberg1979]. Plot 9, burned in 1979, is described by [@Smaill1980]. Plot 8 from the same site was apparently burned in 1980, but no further description or details have been located.
-
-\*\*SFC estimates represent the differences between pre-burn and post-burn fuel loading, including contributions from woody fuels, grasses and forbs, and litter (the site featured negligible duff quantities). Estimating litter consumption values required an estimate of pre-burn litter depth, which was not reported but was instead taken from Ducherer et al. [@ducherer2009], a series of experiments at the same site (mean litter depth from control sites across all years and canopy positions: 3.3 cm).
-
-[end Box 1]
-
 ### [Table 1: Model summary]
 
 ```{r Mod sum table, echo=FALSE, warning=FALSE}
@@ -1453,7 +1432,29 @@ It is expected that the quality and quantity of source data will improve over ti
 ::: {#refs}
 :::
 
-## 7. Appendix: Final model coefficients
+## 7. Appendices 
+
+### Appendix A: Fires in Ponderosa Pine-Douglas-fir stands in BC
+
+Seven\* experimental fires were conducted in open Ponderosa pine-Douglas-fir forest stands in the Dewdrop Range near Kamloops, British Columbia, in 1978-79. These fires were documented in theses by Nyberg[@Nyberg1979] and Smaill [@Smaill1980], while summary information and photos were incorporated into the FBP System C-7 fuel type [@forestrycanadafiredangergroup1992; @DeGroot1993].
+
+These documents were reanalyzed in order to merge these fires into the modelling database. Stand structure at Dewdrop consisted of a low density overstory and mostly herbaceous understory; mean canopy closure was 27.2 %. Litter and duff cover were described as patchy to nonexistent [@Nyberg1979]. In the FBP System database, surface fuel consumption (SFC) was reported for only one observation (Plot 9), with a very high total SFC value of 5.3 kg m^-2^, including \> 5 kg m^-2^ of woody fuel consumption.
+
+The original SFC estimate for Plot 9 included consumption of all downed woody fuels, including from large diameter coarse woody debris (CWD; \> 7.6 cm). While methodologically consistent with other FBP experimental burns [@stocks1987b; @stocks1989], the Plot 9 CWD consumption represents the great majority of the total SFC and represents an outlier compared to other experiments. For instance, the mean CWD proportion of SFC at the Ontario Kenshoe Lake and Sharpsand Creek sites was 9.2 % [c.f. @stocks1987b; @stocks1989], compared with 50.2 % at Dewdrop (Mann-Whitney U-test: p \< 0.001). The difference is accounted by both higher seasonal drought conditions during the Dewdrop burns (mean Drought Code (DC): 394 at Dewdrop vs 111 at Kenshoe Lake and 161 at Sharpsand; see @vanwagner1987 for DC description), and probably the overall frequency of larger diameter trees at Dewdrop (\> 17 % of trees in the '\>25 cm' DBH class; cf. [@Nyberg1979]); compared with, e.g. \~ 1 % of trees in the '\> 23 cm' DBH class at Kenshoe Lake ('White River'); [@walker1975]).
+
+Including contributions from CWD in surface fires is somewhat at odds with current understanding of flame front dynamics. Consumption studies suggest that most CWD consumption in PPDF stands occurs during post-frontal smoldering rather than during flaming combustion [@monsanto2008; @brown2003; @ottmar2014]. The high SFC at Dewdrop from CWD therefore could overpredict fire intensity and crown fire tendency [@vanwagner1977; @perrakis2023]. To compensate, new SFC values at Dewdrop were calculated excluding the CWD contribution. Including only consumption from finer fuels (grass and herbs, litter, duff, and woody debris \< 7.6 cm) resulted in a recalculated (notably lower: 2.01 kg m^-2^) value for Plot 9.\*\* SFC values calculated using the same methods for Plots 1-6 were 0.47 – 1.39 kg m^-2^.
+
+Also of interest was the summer weather pattern and understory condition during these fires. The 1978 season was described as unusually wet, with measurable rainfall received at the Dewdrop site nearly weekly from April-August [@Nyberg1979], an unusual occurrence in this summer-dry climate. Consequently, understory vegetation remained relatively green during the experimental fires. Relative proportions of live and dead grass and forb biomass were used to calculate percent curing values (% C) for these observations, in the same manner as used in Australian and Canadian grass fire models [@cheney1998; @wotton2009]:$$\% C = \frac {GB_D} {(GB_D + GB_L)} \cdot 100 $$ [B1], where % *C* is the percent curing, and *GB~D~* and *GB~L~* represent dead and live grass and forb biomass (kg m^-2^), respectively. Using mean values from experimental and control plot sampling on each given date [@nyberg1979] gave % *C* values of 56-66 for Plots 1-6. For Plot 9, reported values are unfortunately less explicit between live and dead biomass [@Smaill1980] and eq. B1 could not be used. Based on the slightly lower overall grass moisture value (22.7 %) and late season date, % C for that plot was estimated at 80%.
+
+These analyses allowed us to incorporate the dry cordilleran Dewdrop experimental fires in our surface fire models (aggregated fuels), despite being somewhat distinct from the primarily boreal conifer and deciduous experiments.
+
+\*Plot numbers 1–6, burned in 1978, are described by [@Nyberg1979]. Plot 9, burned in 1979, is described by [@Smaill1980]. Plot 8 from the same site was apparently burned in 1980, but no further description or details have been located.
+
+\*\*SFC estimates represent the differences between pre-burn and post-burn fuel loading, including contributions from woody fuels, grasses and forbs, and litter (the site featured negligible duff quantities). Estimating litter consumption values required an estimate of pre-burn litter depth, which was not reported but was instead taken from Ducherer et al. [@ducherer2009], a series of experiments at the same site (mean litter depth from control sites across all years and canopy positions: 3.3 cm).
+
+### 
+
+### Appendix B: Final model coefficients
 
 ```{r echo=FALSE, warnings=FALSE}
 #build table of coefficients for all final models in 
