@@ -1,0 +1,21 @@
+Modify Chapman-Richards function for horizontal asymptote
+
+Modification Strategy:
+
+Instead of having 100 as the upper limit, we replace it with a function that grows linearly:
+y=(a+bx)×(1−e^(−cx))d
+
+
+where:
+
+    a+bx defines the oblique asymptote (so in your case, a=0, b=0.3).
+    c controls how fast the curve approaches the asymptote.
+    d still controls the steepness of the sigmoidal transition.
+
+Specific Equation for y=0.3xy=0.3x as the asymptote:
+y=(0.3x)×(1−e(−0.444x))3
+
+This keeps the original sigmoidal shape but ensures that as x→∞, y≈0.3x.
+
+Would you like finer control over the transition? For example, adjusting how quickly it moves from the exponential phase to following the linear asymptote?
+
