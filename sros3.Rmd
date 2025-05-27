@@ -147,16 +147,16 @@ sros.st <- function(isi) {
 s.fires.con <- filter(s.fires2, FT=='Con') 
 
 #conifer-only isi.mcsa^2 ROS model
-con.lm.mod <- lm(data=s.fires.con, formula=ROS~I(isi.m^2)-1)
+m4.con.lm.mod <- lm(data=s.fires.con, formula=ROS~I(isi.m^2)-1)
 
 #conifer-only ISI^2 model
-con.ISI.mod <- lm(data=s.fires.con, formula=ROS~I(ISI^2)-1)
+m3.con.ISI.mod <- lm(data=s.fires.con, formula=ROS~I(ISI^2)-1)
 #use for testing fuel type significance
 
 
 #prediction function for simple lm using isi.m
 sf.con.fun <- function(isim) {
-  predict(con.lm.mod, newdata=list(isi.m=isim))
+  predict(m4.con.lm.mod, newdata=list(isi.m=isim))
 }
 
 #Noted - fires with some torching seem to be anomalous
@@ -209,20 +209,20 @@ s.fires.mod <- s.fires.mod0 %>%
 # - including substantial percentage of D1 fires
 
 #linear model using ISI^2
-sros.ISI2.mod <- lm(ROS ~ I(ISI^2)-1, data=s.fires.mod)
+m6.sros.ISI2.mod <- lm(ROS ~ I(ISI^2)-1, data=s.fires.mod)
 #r^2=0.7217 with s.fires3
 #r^2=0.692 with s.fires.mod
 
 #wind speed squared only
-sros.ws2.mod <- lm(ROS ~ I(ws^2)-1, data=s.fires.mod)
+m5.sros.ws2.mod <- lm(ROS ~ I(ws^2)-1, data=s.fires.mod)
 
 #lm using isi.m^2
-sros.isim2.mod <- lm(ROS ~ I(isi.m^2)-1, data=s.fires.mod)
+m8.sros.isim2.mod <- lm(ROS ~ I(isi.m^2)-1, data=s.fires.mod)
 #r^2=0.708 with s.fires2
 #r^2=0.7605 with s.fires.mod
 
 #lm using isi.m AND SFC - best simple model overall
-sros.isim2SFC.mod <- lm(ROS ~ I(isi.m^2) + sqrt(SFC)-1, 
+m9.sros.isim2SFC.mod <- lm(ROS ~ I(isi.m^2) + sqrt(SFC)-1, 
                         data=s.fires.mod)
 #r^2=0.75 with s.fires2
 #r^2=0.8025 with s.fires.mod
@@ -230,21 +230,21 @@ sros.isim2SFC.mod <- lm(ROS ~ I(isi.m^2) + sqrt(SFC)-1,
 
 
 #similar model with ISI (sros.ISI2SFC.mod) is also good, but not as good
-sros.ISI2SFC.mod <- lm(ROS ~ I(ISI^2) + sqrt(SFC) - 1, 
+m7.sros.ISI2SFC.mod <- lm(ROS ~ I(ISI^2) + sqrt(SFC) - 1, 
                        data=s.fires.mod)
 #r^2=0.7501
 
 #prediction functions
-sf.lin.fun <- function(ws) {
-  predict(sros.lin.mod, newdata=list(ws=ws))
-}
+# sf.lin.fun <- function(ws) {
+#   predict(sros.lin.mod, newdata=list(ws=ws))
+# }
 
 #nls model and prediction function: ax^b format
-sf.axb.isi.mod <- nls(data=s.fires.mod, formula= 
+m12.sf.axb.isi.mod <- nls(data=s.fires.mod, formula= 
                ROS ~ a * ISI^b, start=list(a=1, b=2))
 
 sf.axbisi.fun <- function(isi) {
-  predict(sf.axb.isi.mod, newdata=list(ISI=isi))
+  predict(m12.sf.axb.isi.mod, newdata=list(ISI=isi))
 }
 
 
@@ -252,9 +252,9 @@ sf.axbisi.fun <- function(isi) {
 #also ISI2SFC model and 
 f.sfires0 <- data.frame(fisim=seq(0:30), fsfc1=1.34, fsfc2=2)
 f.sfires <-mutate(rowwise(f.sfires0),
-              fros1=predict(sros.isim2SFC.mod, 
+              fros1=predict(m9.sros.isim2SFC.mod, 
               newdata=list(isi.m=fisim, SFC=fsfc1)),
-              fros2=predict(sros.isim2SFC.mod, 
+              fros2=predict(m9.sros.isim2SFC.mod, 
               newdata=list(isi.m=fisim, SFC=fsfc2)))
 
 #FBP/Van Wagner models:
@@ -361,12 +361,12 @@ con.ft3 <- lm(ROS ~ I(ISI^2) + FT3 -1, data=s.con2)
 
 #Add function for ISI2SFC and ISI.mSFC models
 sf.isi2sfc.fun <- function(isi, sfc) {
-  predict(sros.ISI2SFC.mod, newdata=list(ISI=isi, SFC=sfc)) %>% 
+  predict(m7.sros.ISI2SFC.mod, newdata=list(ISI=isi, SFC=sfc)) %>% 
     unname()
 }
 
 sf.isim2sfc.fun <- function(isim, sfc) {
-  predict(sros.isim2SFC.mod, newdata=list(isi.m=isim, 
+  predict(m9.sros.isim2SFC.mod, newdata=list(isi.m=isim, 
                                           SFC=sfc)) %>%
     unname()
 }
@@ -374,28 +374,28 @@ sf.isim2sfc.fun <- function(isim, sfc) {
 #SFC=0.75
 sf.isim2sfc075.fun <- function(isim) {
   sfc_vals=rep(0.75, length(isim))  #required for stat_function
-  predict(sros.isim2SFC.mod, 
+  predict(m9.sros.isim2SFC.mod, 
           newdata=list(isi.m=isim, SFC=sfc_vals))
 }
 
 #SFC=1.5
 sf.isim2sfc15.fun <- function(isim) {
   sfc_vals=rep(1.5, length(isim))  #required for stat_function
-  predict(sros.isim2SFC.mod, 
+  predict(m9.sros.isim2SFC.mod, 
           newdata=list(isi.m=isim, SFC=sfc_vals))
 }
 
 #SFC=3
 sf.isim2sfc3.fun <- function(isim) {
   sfc_vals=rep(3.0, length(isim))  #required for stat_function
-  predict(sros.isim2SFC.mod, 
+  predict(m9.sros.isim2SFC.mod, 
           newdata=list(isi.m=isim, SFC=sfc_vals))
 }
 
 #SFC=1.5 with ISI function
 sf.isi2sfc15.fun <- function(isi) {
   sfc_vals=rep(1.5, length(isi))  #required for stat_function
-  predict(sros.ISI2SFC.mod, 
+  predict(m7.sros.ISI2SFC.mod, 
           newdata=list(ISI=isi, SFC=sfc_vals))
 }
 
@@ -425,7 +425,7 @@ sf.ft <- lm(ROS ~ I(isi.m^2) + SFC + FT -1,
 sf.ftim <- lm(ROS ~ I(isi.m^2) + FT-1, 
               data=s.fires.mod2) #SFC NS
 
-sf.ftisi <- lm(ROS ~ ISI * FT -1, 
+m15.sf.ftisi <- lm(ROS ~ ISI * FT -1, 
               data=s.fires.mod2) #linear w/ interaction
 
 sf.ftisi2 <- lm(ROS ~ I(ISI^2) + FT -1, 
@@ -455,7 +455,7 @@ ft.isi.fun <- function(isi, ft='Con', mod=1) {
   ft_vals=rep(ft, times=length(isi))
   mod_vals=rep(mod, times=length(isi))
   return(case_when(mod==1 
-                   ~ predict(sf.ftisi, newdata=list(
+                   ~ predict(m15.sf.ftisi, newdata=list(
                      ISI=isi, FT=ft_vals)),
                    mod==2 
                    ~ predict(sf.ftisi2, newdata=list(
@@ -747,7 +747,7 @@ fig2 <-ggplot(fd.ros, aes(x=ws, y=ROS, colour=FiT2))+
   xlim(0, 35)+
   stat_function(fun= m25, colour='black') +
   scale_colour_manual(values=c('red', 'orange', 'green')) +
-  geom_smooth(method='lm', se=TRUE, level=0.95) +
+  geom_smooth(method='lm', se=FALSE, level=0.95) +
   theme_bw() +
   labs(x='WS (km/h)', y='ROS (m/min)', colour='Type of fire') +
   theme(legend.position=c(0.1, 0.8)) +
@@ -755,7 +755,7 @@ fig2 <-ggplot(fd.ros, aes(x=ws, y=ROS, colour=FiT2))+
 
 
 #simple linear sROS model from graph:
-sf.lin.ws <- lm(ROS ~ ws, data=fd.ros %>% filter(FiT2=='S'))
+m1.sf.lin.ws <- lm(ROS ~ ws, data=fd.ros %>% filter(FiT2=='S'))
 
 ```
 
@@ -837,7 +837,7 @@ asym1 <- function(isi) {
 }
 
 # New Aggregate CR equation with slope asymptote
-sf.agg.asy<- nls(data=s.fires.mod, formula= #substitute for sf.crisi.mod
+m10.sf.agg.asy<- nls(data=s.fires.mod, formula= #substitute for sf.crisi.mod
                ROS ~ (asy.slope1 * ISI + asy.yInt1) * (1-exp(-b*ISI))^c, 
                start=list(b=0.1, c=3))
 
@@ -849,7 +849,7 @@ sf.agg.asyfit<- nls(data=s.fires.mod, formula= #substitute for sf.crisi.mod
 
 
 sf.asy.fun <- function(isi) {  #substitute for sf.crisi.fun; M10
-  predict(sf.agg.asy, newdata=list(ISI=isi))
+  predict(m10.sf.agg.asy, newdata=list(ISI=isi))
 }
 
 #exploratory graph to show that this works - asymptote graph, aggregate data, ISI
@@ -868,7 +868,7 @@ asy.slope2 <-0.15
 asy.yInt2 <-13
 
 #New Conifer model with slope asymptote
-sf.con.asy <-nls(data=s.con, formula=
+m13.sf.con.asy <-nls(data=s.con, formula=
                  ROS ~ (asy.slope2 * ISI + asy.yInt2) * (1-exp(-b*ISI))^c,
                  start=list(b=0.1, c=3))
 
@@ -880,7 +880,7 @@ sf.con.asy <-nls(data=s.con, formula=
 
 #prediction function
 sf.asyCon.fun <- function(isi) {  #substitute for sf.crisiCon.fun; M13
-  predict(sf.con.asy, newdata=list(ISI=isi))
+  predict(m13.sf.con.asy, newdata=list(ISI=isi))
 }
 
 asym2 <- function(isi) {
@@ -904,7 +904,7 @@ asym3 <- function(isi.m) {
 }
 
 # New Aggregate CR equation with slope asymptote
-sf.aggM.asy<- nls(data=s.fires.mod, formula= #substitute for sf.crisim.mod
+m11.sf.aggM.asy<- nls(data=s.fires.mod, formula= #substitute for sf.crisim.mod
                ROS ~ (asy.slope3 * isi.m + asy.yInt3) * (1-exp(-b*isi.m))^c, 
                start=list(b=0.1, c=3))
 
@@ -915,7 +915,7 @@ sf.aggM.asy<- nls(data=s.fires.mod, formula= #substitute for sf.crisim.mod
 #did not converge/infitity produced when fitting m3 or i3
 
 sf.asyM.fun <- function(isi.m) {  #substitute for sf.crisi.fun; M10
-  predict(sf.aggM.asy, newdata=list(isi.m=isi.m))
+  predict(m11.sf.aggM.asy, newdata=list(isi.m=isi.m))
 }
 
 ag3 <- ggplot(s.fires4, aes(x=isi.m, y=ROS)) + 
@@ -931,13 +931,13 @@ asy.slope4 <-0.15
 asy.yInt4 <-13
 
 #New Conifer model with slope asymptote
-sf.conM.asy <-nls(data=s.con, formula=
+m14.sf.conM.asy <-nls(data=s.con, formula=
                  ROS ~ (asy.slope4 * isi.m + asy.yInt4) * (1-exp(-b*isi.m))^c,
                  start=list(b=0.1, c=3))
 
 #prediction function
 sf.asyMCon.fun <- function(isi.m) {  #substitute for sf.crisiCon.fun; M13
-  predict(sf.conM.asy, newdata=list(isi.m=isi.m))
+  predict(m14.sf.conM.asy, newdata=list(isi.m=isi.m))
 }
 
 asym4 <- function(isi.m) {
@@ -992,7 +992,7 @@ Fig3 <- ggplot(s.fires4 %>%
 Fig3
 
 
-sf.lin.isi <- lm(ROS~ISI, data=s.fires.con)
+m2.sf.lin.isi <- lm(ROS~ISI, data=s.fires.con)
 #linear ISI model like in graph
 
 
@@ -1088,25 +1088,25 @@ While SFC did not initially stand out as significant, it was explored further du
 
 
 #add sros.st, 
-mod.list.long <- list(sf.lin.ws,
-              sf.lin.isi,
-              con.ISI.mod,
-              con.lm.mod,
-              sros.ws2.mod,
-              sros.ISI2.mod,
-              sros.ISI2SFC.mod,
-              sros.isim2.mod,
-              sros.isim2SFC.mod,
-              sf.agg.asy,  #slope asymptote model, aggregate ISI
+mod.list.long <- list(m1.sf.lin.ws, #m1
+              m2.sf.lin.isi, #m2
+              m3.con.ISI.mod, #m3
+              m4.con.lm.mod, #m4
+              m5.sros.ws2.mod, #m5
+              m6.sros.ISI2.mod, #m6
+              m7.sros.ISI2SFC.mod, #m7
+              m8.sros.isim2.mod, #m8
+              m9.sros.isim2SFC.mod, #m9
+              m10.sf.agg.asy,  #slope asymptote model, aggregate ISI
         #      sf.crisi.mod,
-              sf.aggM.asy, #slope asymptote for aggregate, isi.m
+              m11.sf.aggM.asy, #slope asymptote for aggregate, isi.m
         #      sf.crisim.mod,  #
-              sf.axb.isi.mod, 
-              sf.con.asy, #slope asymptote, conifer ISI
+              m12.sf.axb.isi.mod, 
+              m13.sf.con.asy, #slope asymptote, conifer ISI
         #      sf.crisiCon.mod,
-              sf.conM.asy, #slope asymptote, conifer isi.m     
+              m14.sf.conM.asy, #slope asymptote, conifer isi.m     
         #      sf.crisimCon.mod, #
-              sf.ftisi,
+              m15.sf.ftisi,
               c3s,
               c4s, 
               c6s,
@@ -1123,10 +1123,10 @@ modnames <-c('wslin.con',
               'isim2.agg',
               'isim2SFC.agg',
               'crisi.asy.agg', #replaces crisi.agg
-              'crisim.agg',
+              'crisim.asy.agg', #replaces crisim.agg
               'axb.isi.agg',
               'crisi.asy.con',  #replaces crisi.con
-              'crisim.con',
+              'crisim.asy.con', #replaces crisim.con
              'ftisi',
              'c3s', 'c4s', 'c6s', 'd1', '25 perc') #last 5 are functions
 
@@ -1344,18 +1344,20 @@ acc.tab4 %>% select(-Model) %>%
 
 ```{r ISIpreds, echo=FALSE}
 #summary of ISI 5-15 vals
+acc.extract<- filter(acc.tab4, !Num %in% c(16:19)) %>%
+  select('ISI=5', 'ISI=10', 'ISI=15') %>% round(2)
 
-min5 <- acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=5') %>% min()
-max5 <- acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=5') %>% max()
-mean5 <-acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=5') %>% mean() %>% round(2)
+min5 <- acc.extract %>% pull('ISI=5') %>% min()
+max5 <- acc.extract %>% pull('ISI=5') %>% max()
+mean5 <-acc.extract %>% pull('ISI=5') %>% mean() 
 
-min10 <- acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=10') %>% min()
-max10 <- acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=10') %>% max()
-mean10 <-acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=10') %>% mean() %>% round(2)
+min10 <- acc.extract %>% pull('ISI=10') %>% min()
+max10 <- acc.extract %>% pull('ISI=10') %>% max()
+mean10 <-acc.extract %>% pull('ISI=10') %>% mean() 
 
-min15 <- acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=15') %>% min()
-max15 <- acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=15') %>% max()
-mean15 <-acc.tab4 %>% filter(!Num %in% c(16:19)) %>% pull('ISI=15') %>% mean() %>% round(2)
+min15 <- acc.extract %>% pull('ISI=15') %>% min()
+max15 <- acc.extract %>% pull('ISI=15') %>% max()
+mean15 <-acc.extract %>% pull('ISI=15') %>% mean()
 
 ```
 
@@ -1365,7 +1367,7 @@ Table 1 shows evaluation metrics for the list of final fitted models, as well as
 
 Non-linear model forms had insufficient data to automatically fit the asymptote parameters, using either a fixed value (eq. [2]) or linear function asymptote (eq. [3]). Rather than setting an arbitrary asymptote value (e.g., a=20 was initially tested), we set an oblique asymptote (eq. [3]) based on visual inspection and an assumed gradual ROS rise beyond the range of data to account for extrapolation, as in the original FBP System [@forestrycanadafiredangergroup1992]. The asymptote parameters were similar in slope but translated slightly higher for conifer compared with aggregate models; aggregate: *m*=0.15, *i*=10; conifer: *m*=0.15, *i*=13. The remaining parameters were fitted to the data, producing relatively high-performing models, particularly for the boreal conifer dataset (Models 13, 14: RMSE \< 1.2, ER2 \> 0.7, MAE \< 0.9 m min^-1^). The corresponding aggregated forest data models performed adequately, but reflected greater variability in the source data at higher wind and *ISI* or *ISI~sa~* levels. The best aggregate data model included *ISI~sa~* and *SFC* predictors (Model 9: RMSE=1.32, ER2=0.662, MAE \<1 m min^-1^). The best nonlinear aggregate model was Model 11 (RMSE=1.43, ER2=0.589, MAE=1.05 m min^-1^). Extended predictions showing expected ROS at varying SFC and FT levels (Models 7, 9, and 15) are shown in Appendix C.
 
-Table 1 also compares ROS predictions for conifer stands from the older Van Wagner [@vanwagner1993a] and FBP surface fire functions, as well as the M25% model, with the new fitted models. High MAE and MAPE values, and negative values for ER2, suggest very poor performance by (especially) the C-4s and C-6s models compared to the fire observations. The C-3s, D1, and M25% models, in contrast, are in the lower end of the range of model performance, but otherwise appear to produce unbiased results. When evaluated against the deciduous data alone, the D-1 model had the following diagnostics: RMSE=0.568; MAE=1.297; MAPE=0.988; ER2=0.543.[^1] There were no advantages to the $a \cdot ISI ^{b}$ model (Model 12) over other model forms.
+Table 1 also compares ROS predictions for conifer stands from the older Van Wagner [@vanwagner1993a] and FBP surface fire functions, as well as the M25% model, with the new fitted models. High MAE and MAPE values, and negative values for ER2, suggest very poor performance by (especially) the C-4s and C-6s models compared to the fire observations. The C-3s, D1, and M25% models, in contrast, are in the lower end of the range of model performance, but otherwise appear to produce unbiased results. When evaluated against the deciduous data alone, the D-1 model had the following diagnostics: RMSE=0.568; MAE=1.297; MAPE=0.988; ER2=0.543.[^1] There were no apparent advantages to the $a \cdot ISI ^{b}$ model (Model 12) over other model forms.
 
 [^1]: Note: the dataset for the D-1 model originally described by [@forestrycanadafiredangergroup1992] differs only from present deciduous database by two additional wildfires, excluded here to a lack of documentation.
 
@@ -1466,24 +1468,25 @@ extended.sfc.final <-ex.sfc.tab %>%
   opt_table_font(font = "Arial") #%>% gtsave("your_table.html")
 
 #compare SFC to sqrt(SFC)
-ef.sfc.mod1 <- ef.r.squared(actual=augment(sros.ISI2SFC.mod) %>% pull(ROS), 
-             pred=augment(sros.ISI2SFC.mod) %>% pull(.fitted))
+ef.sfc.mod1 <- ef.r.squared(actual=augment(m7.sros.ISI2SFC.mod) %>% 
+                              pull(ROS), 
+             pred=augment(m7.sros.ISI2SFC.mod) %>% pull(.fitted))
 
-ef.sfc.mod2 <- ef.r.squared(actual=augment(sros.isim2SFC.mod) %>% pull(ROS), 
-             pred=augment(sros.isim2SFC.mod) %>% pull(.fitted))
+ef.sfc.mod2 <- ef.r.squared(actual=augment(m9.sros.isim2SFC.mod) %>% 
+                              pull(ROS), 
+             pred=augment(m9.sros.isim2SFC.mod) %>% pull(.fitted))
 
 ef.sfc.mod10 <- ef.r.squared(
-  actual=augment(update(sros.ISI2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
+  actual=augment(update(m7.sros.ISI2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
     pull(ROS),
-  pred=augment(update(sros.ISI2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
+  pred=augment(update(m7.sros.ISI2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
     pull(.fitted))
 
 ef.sfc.mod20 <- ef.r.squared(
-  actual=augment(update(sros.isim2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
-    pull(ROS), pred=augment(update(sros.isim2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
+  actual=augment(update(m9.sros.isim2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
+    pull(ROS), 
+  pred=augment(update(m9.sros.isim2SFC.mod, ~.-sqrt(SFC) + SFC)) %>% 
     pull(.fitted))
-
-
 
 ```
 
@@ -1494,19 +1497,19 @@ ef.sfc.mod20 <- ef.r.squared(
 #do this on crisiCon, crisimCon, 
 
 #jack.crisiCon <- nlstools::nlsJack(sf.con.mod)  #old, fixed a
-jack.crisiCon <- nlstools::nlsJack(sf.con.asy)
+jack.crisiCon <- nlstools::nlsJack(m13.sf.con.asy)
 #summary(jack.crisiCon)
 #crisiCon: rows 10, 28, 49, 51 (s.con2)
 
-jack.crisimCon <-nlstools::nlsJack(sf.conM.asy)
+jack.crisimCon <-nlstools::nlsJack(m14.sf.conM.asy)
 #jack.crisimCon <-nlstools::nlsJack(sf.crisimCon.mod)
 #summary(jack.crisimCon)
 #crisimCon: rows 10, 28, 51
 
-jack.crisimAgg <-nlstools::nlsJack(sf.aggM.asy) #s.fires.mod
+jack.crisimAgg <-nlstools::nlsJack(m11.sf.aggM.asy) #s.fires.mod
 #28, 52, 54, 60, 83, 88, 89, 91  #omit 83; no SFC
 
-jack.crisiAgg <-nlstools::nlsJack(sf.agg.asy) 
+jack.crisiAgg <-nlstools::nlsJack(m10.sf.agg.asy) 
 #28, 58, 59, 60, 88, 91  #only points sig. to both b and c
 
 #for lm models, use broom::augment to run Cook's D
@@ -1517,14 +1520,14 @@ jack.crisiAgg <-nlstools::nlsJack(sf.agg.asy)
 #4/n = 0.04 - 0.08
 
 #Just pull high cook's D values
-cook.isim2sfc <- broom::augment(sros.isim2SFC.mod) %>%
+cook.isim2sfc <- broom::augment(m9.sros.isim2SFC.mod) %>%
   select(1:4, .cooksd) %>%
   filter(.cooksd > 0.07) %>% #good enough for 4/n for n=51
   mutate(isi.m=sqrt(`I(isi.m^2)`) %>% as.numeric(), 
          SFC=`sqrt(SFC)`^2)
 #needs the 'as.numeric' to plot
 
-cook.ISI2sfc <- broom::augment(sros.ISI2SFC.mod) %>%
+cook.ISI2sfc <- broom::augment(m7.sros.ISI2SFC.mod) %>%
   select(1:4, .cooksd) %>%
   filter(.cooksd > 0.077) %>%
   mutate(ISI= sqrt(`I(ISI^2)`) %>% as.numeric(), 
@@ -1558,7 +1561,7 @@ fig4 +
             colour='purple') +
   geom_text(x=19, y=sf.crisimCon.fun(19)+1, label=lab3,
             colour='pink') +
-  labs(x=expression(ISI[sa]), y='ROS (m/min)', size=expression(SFC~(kg/m^{2})), 
+  labs(x=expression(ISI[sa]), y='ROS (m/min)', size=expression(SFC~(kg/m^{2})), ## ~ is space; ^{2} is superscript 2 for squared term
        colour='Fuel type') +
   theme(legend.position='none')
   
@@ -1574,7 +1577,7 @@ As Table 1 indicates, 'aggregated' dataset models (e.g. M10, M15) performed gene
 
 #### Influential observations #not sure if this is needed
 
-Individual observations were evaluated for leverage in the best models using Cook's Distance and jackknife resampling. For non-linear models 10, 11, 13 and 14#, observations were flagged when the difference between model parameters calculated with and without individual estimates, $\Delta$, was $\Delta>\frac {2 s} {\sqrt{n}}$, where *s* is the standard error of the parameter estimate and *n* is the sample size [@baty2015]. For linearized models (Models 7 and 9#), observations with Cook's D \> 0.78 were flagged as influential, based on the 'high influence' threshold of 4/n, using n=51 from the conifer dataset (not shown; see Appendix#). High influence observations are shown in Figures 4 and 5, consisting mainly of high *ISI*/*ISI~sa~* and high ROS observations, particularly wildfires.
+Individual observations were evaluated for leverage in the best models using Cook's Distance and jackknife resampling. For non-linear models 10, 11, 13 and 14#, observations were flagged when the difference between model parameters calculated with and without individual estimates, $\Delta$, was $\Delta>\frac {2 s} {\sqrt{n}}$, where *s* is the standard error of the parameter estimate and *n* is the sample size [@baty2015]. For linearized models (Models 7 and 9#), observations with Cook's D \> 0.78 were flagged as influential, based on the 'high influence' threshold of 4/n, using n=51 from the conifer dataset (not shown; see Appendix#). High influence observations are shown in Figures 4 and 5 and consist mainly of high *ISI*/*ISI~sa~* and high ROS observations, particularly wildfires.
 
 ### [Fig 5]
 
@@ -1620,7 +1623,7 @@ Since wildfires in conifer stands spreading under higher danger conditions tend 
 
 As wildfire hazard reduction treatments become more widespread, where stands with high CBH and low surface fuel loading are engineered to resist crown fire [e.g., @agee2005; @hirsch1999], there is a need to estimate sROS under higher danger conditions. The lack of data under more extreme conditions creates uncertainty that cannot be solved by these models alone but will require additional observations for validation, from experimental burns or high quality wildfire observations where surface fire behaviour can be identified. These might come from fires in tall pine or Douglas-fir stands with CBH \> 10 m, for instance (#cite Watershed paper).
 
-### Predictors of surface ROS 
+### Predictors of surface ROS
 
 While the *ISI* is old and familiar, it was the strongest ROS predictor, performing better than other combinations of weather or moisture index variables. The *ISI* was recently found to be the variable most closely correlated to area burned during the record-breaking 2023 Canadian wildfire season [@jain2024]. Database values used in the analysis represent indices that best represent burning conditions according to primary sources; for forecasting purposes, we expect hourly *ISI* values to perform better than daily values [@beck2002]. The *ISI~sa~* adds some additional influences based on the stand-adjusted moisture estimate models [@wotton2007], including the ability to adjust for stand density and more persistent forest floor drought (as represented by the DMC).
 
@@ -1630,19 +1633,21 @@ The present surface fire models involve mainly weather and moisture-related inpu
 
 The primary value of such surface ROS models may be to inform varying fuel structure scenarios in dynamic modelling systems [e.g., @perrakis2020a; @perrakis2024a; @cfsfiredangergroup2021], where tools such as calculators and lookup tables enable users to test various fuel structure and weather scenarios. As noted, conifer species was generally not a significant ROS predictor; however, differences in experimental design (e.g. plot size, fuelbreak width, frequency of wind monitoring) may mask small but significant differences. Laboratory experiments have suggested that a range of conifer litterbed characteristics, including species and bulk density, can affect heat fluxes and overall flammability [@cornwell2015; @wilson1990; @Campbell-Lochrie.etal2021]; however, laboratory results can be challenging to apply to complex natural forest fuelbeds, requiring a high number of replicates as heterogeneity increases [@mulvaney2016]. In our models, deciduous observations were included for simple comparison purposes; however, no new data was provided beyond the range of the original D-1 spread model, which matches the noisy deciduous fire experiment dataset adequately.
 
-Four or five models presented stand out as superior than the others (Table 1): Models 13 and 14, nonlinear curves fitted to boreal and sub-boreal conifer stands with the highest ER2 and lowest MAE values, for use with *ISI* (M13) and *ISI~sa~* (M14) inputs; Model 9, a good 'aggregated data' model suitable for a range of forest types, featuring several user input options thanks to its *ISI~sa~* and *SFC* predictors; Model 15, which showed the influence of fuel type, would be particularly suitable for deciduous and PPDF (at 95% cured) stands; and perhaps the '25 % model', the simplest model for rapid or emergency use.
+Four or five models presented stand out as superior than the others (Table 1). These include Models 13 and 14, nonlinear curves fitted to boreal and sub-boreal conifer stands with the highest ER2 and lowest MAE values, for use with *ISI* (M13) and *ISI~sa~* (M14) inputs; Model 9, a good 'aggregated data' model suitable for a range of forest types, featuring several user input options thanks to its *ISI~sa~* and *SFC* predictors; Model 15, which showed the influence of fuel type, would be particularly suitable for contrasting between conifer, deciduous and PPDF (at 95% cured) stands; and perhaps the '25 % model', the simplest model for rapid or emergency use.
 
-Although stand density class variables were not significant on their own, the models using *ISI~sa~* incorporate fuel moisture differences via the *mc~sa~*. This allows for some ability to represent, for instance, thinning treatments, where physical modelling studies have suggested that reducing stand density can increase surface ROS [e.g., @parsons2018; @marshall2020]. However, the effects of such differences are relatively small in the present models and restricted to changing density categories in the *mc~sa~* model. More significant changes (e.g. clearcutting or severe density reductions) are unlikely to be adequately represented. For instance, in a pine stand under FFMC 92, DMC 100, WS~10~=15 km h^-1^ conditions in summer, decreasing density from 'high' (H) to 'moderate' (M) or 'low' (L) conditions would result in an increase from 3.5 to 3.7 to 4.6 m min^-1^, respectively, using Model 9 (assuming SFC of 1.5 kg m^-2^): a maximum density-dependent difference ($\Delta$) of 1.1 m min^-1^. Varying SFC between 0.5 and 3.5 kg m-2 could further stretch $\Delta$ to 1.8 m min^-1^, holding weather indices constant. This is a small difference for capturing the full range of silvicultural management options. For instance; tree density can be reduced by 70-80% in certain hazard reduction treatments [@prichard2010; @hirsch1999]. The present models are likely most appropriate for moderately open to closed conifer stands; a lower limit for crown closure would likely to be near 20 % (the level of opening of the more open PPDF and jack pine experiments). Below this limit, very open forests and parkland or savannah-type stand structure would have much greater wind penetration [@albini1979; @moon2019] and could potentially support significantly faster surface fire spread than appears in our data.
+Although stand density class variables were not significant on their own, the models using *ISI~sa~* incorporate fuel moisture differences via the *mc~sa~*. This allows for some ability to represent, for instance, thinning treatments, where physical modelling studies have suggested that reducing stand density can increase surface ROS [e.g., @parsons2018; @marshall2020]. However, the effects of such differences are relatively small in the present models as the only relationship being simulated is the effects of large density category differences on fuel moisture in the *mc~sa~* model. More significant changes (e.g. clearcutting or severe density reductions) are unlikely to be adequately represented. For instance, in a pine stand under FFMC 92, DMC 100, WS~10~=15 km h^-1^ conditions in summer, decreasing density from 'high' (H) to 'moderate' (M) or 'low' (L) conditions would result in an increase from 3.5 to 3.7 to 4.6 m min^-1^, respectively, using Model 9 (assuming SFC of 1.5 kg m^-2^): a maximum density-dependent difference ($\Delta$) of 1.1 m min^-1^. Varying SFC between 0.5 and 3.5 kg m-2 could further stretch $\Delta$ to 1.8 m min^-1^, holding weather indices constant. This is a small difference for capturing the full range of silvicultural management options. For instance; tree density is often reduced by 70-80% in hazard reduction treatments [@prichard2010; @hirsch1999]. The present models are likely most appropriate for moderately open to closed conifer stands; a lower limit for crown closure would likely to be near 20 % (the level of opening of the more open PPDF and jack pine experiments). Below this limit, very open forests and parkland or savannah-type stand structure would have much greater wind penetration [@albini1979; @moon2019] and could potentially support significantly faster surface fire spread than appears in our data.
 
-As noted, the major limitation of these ROS models and underlying data dataset are the paucity of observations at higher danger conditions (ws or ISI). For improving these empirical models, there is no substitute for additional high quality observations. Surface fire observations spreading under high indices would necessarily have high LCBH and-or low SFC to avoid crowning. Additional observations under such conditions are unlikely to come from experimental burning, but could be detected from opportunistic imaging of spreding wildfires [e.g., @hart2021; @valero2018]. Until such data are acquired , predictions beyond the range of data (i.e., ISI \> 19.2 or ISI~sa~ \> 24.5 for conifer stands) constitute extrapolation. While never recommended, extrapolation is often necessary in operational settings [e.g., @forestrycanadafiredangergroup1992]. For such purposes, we suggest the modified Chapman-Richards models (10, 11, 13 or 14#) to avoid the more extreme results generated by quadratic term models (with *ISI^2^* or *ISI~sa~^2^*). For example, the conditions in the previous example (pine stand in summer, density discussion) but with WS~10~=40 km h^-1^ (producing ISI of `r ISI(92, 40) %>% round(1)` ) would predict ROS of `r predict(con.ISI.mod, newdata=list(ISI=ISI(92, 40))) %>% round(1)` m min^-1^ using Model 3, with its *ISI^2^* term. Model 13, a semi-sigmoidal model, predicts much lower ROS (`r sf.asyCon.fun(ISI(92, 40)) %>% round(1)` m min^-1^) under such conditions. While the actual sROS of this hypothetical example is unknown (expected ROS could be +/- 50 % or more of the predicted value; see below), ROS \> 50 m min^-1^ in a conifer forest is highly unlikely to manifest as surface fire; much more likely fire behaviour in such conditions would be fully developed active crown fire behaviour [Figure 2; see also @cruz2005; @cruz2019].
+As noted, the major limitation of these ROS models and underlying data dataset are the paucity of observations at higher danger conditions (ws or *ISI*). For improving these empirical models, there is no substitute for additional high quality observations. Surface fire observations spreading under high indices would necessarily have high LCBH and-or low SFC to avoid crowning. Additional observations under such conditions are unlikely to come from experimental burning, but could be detected from opportunistic imaging of spreding wildfires [e.g., @hart2021; @valero2018]. Until such data are acquired , predictions beyond the range of data (i.e., *ISI* \> 19.2 or *ISI~sa~* \> 24.5 in conifer stands) constitute extrapolation. While never recommended, extrapolation is often necessary in operational settings [e.g., @forestrycanadafiredangergroup1992]. For such purposes, we suggest the modified Chapman-Richards models (10, 11, 13 or 14) to avoid the more extreme results generated by quadratic term models (with *ISI^2^* or *ISI~sa~^2^*). For example, the conditions in the previous example (pine stand in summer, density discussion) but with WS~10~=40 km h^-1^ (producing ISI of `r ISI(92, 40) %>% round(1)` ) would predict ROS of `r predict(m3.con.ISI.mod, newdata=list(ISI=ISI(92, 40))) %>% round(1)` m min^-1^ using Model 3, with its *ISI^2^* term. Model 13, a semi-sigmoidal model, predicts much lower ROS (`r sf.asyCon.fun(ISI(92, 40)) %>% round(1)` m min^-1^) under such conditions. While the actual sROS of this hypothetical example is unknown (expected ROS could be +/- 50 % or more of the predicted value; see below), ROS \> 50 m min^-1^ in a conifer forest is highly unlikely to manifest as surface fire; much more likely fire behaviour in such conditions would be fully developed active crown fire behaviour [Figure 2; see also @cruz2005; @cruz2019].
 
-Finally, the 25% model is presented in the same vein as the Cruz and Alexander '10% rule' [@cruz2019] and '20% rule' [@cruz2022a] models - as an approximate value suitable for mental arithmetic and rapid field use. However, the unit difference (km h^-1^ vs m min^-1^) is critical for proper usage. An equal comparison with, for instance, the 10% rule (same units) equates to 1.5 % of the *WS~10~*. This also presents a finding of interest: on average, experimental conifer crown fires in Canada are 5.6 times faster than experimental surface fires under similar wind speeds, since the most accurate approximation for crown fires was 8.4 % of the *WS~10~* [@cruz2019]; (8.4/1.5=5.6).
+Finally, the 25% model is presented in the same vein as the Cruz and Alexander '10% rule' [@cruz2019] and '20% rule' [@cruz2022a] models - as an approximate value suitable for mental arithmetic and rapid field use. However, the unit difference (km h^-1^ vs m min^-1^) is critical in the present case for proper usage. An equal comparison with, for instance, the 10% rule (same units) equates to 1.5 % of the *WS~10~*. This also presents a finding of interest: on average, experimental conifer crown fires in Canada are 5.6 times faster than experimental surface fires under similar wind speeds, since the most accurate approximation for crown fires was 8.4 % of the *WS~10~* [@cruz2019]; (8.4/1.5=5.6).
+
+### [Table 3: Expected accuracy]
 
 ```{r label=expectAcc, echo=FALSE, warnings=FALSE}
 
 #MAPE
 #sros.isim2SFC.mod
-pred1 <- broom::augment(sros.isim2SFC.mod) %>% 
+pred1 <- broom::augment(m9.sros.isim2SFC.mod) %>% 
   select(ROS, `I(isi.m^2)`, .fitted) %>%
   rename(pred9=.fitted) %>%
   mutate(isi.m=sqrt(`I(isi.m^2)`),
@@ -1652,8 +1657,8 @@ pred1 <- broom::augment(sros.isim2SFC.mod) %>%
 #MAPE table, M9
 #sros.isim2SFC.mod
 mape.m9 <- pred1 %>% #isi.m 12 appears to be a threshold
-  group_by(ISI_sa=if_else(isi.m < 12, 'Low', 'High'), #group by hi/lo 
-           Prediction=if_else(ROS < pred9, 'over', 'under')) %>% #over/under pred 
+  group_by(ISI_sa=if_else(isi.m < 12, 'ISI<12', 'ISI>12'), #group by hi/lo 
+           Prediction=if_else(ROS < pred9, 'Over', 'Under')) %>% #over/under pred 
   summarize(MAPE=mean(ape) %>% round(2), 
             Q90APE=quantile(ape, 0.9) %>% round(2)) %>% #MAPE and 90th of APE
   ungroup() 
@@ -1663,8 +1668,8 @@ mape.m9 <- pred1 %>% #isi.m 12 appears to be a threshold
 
 #MAE table, M9
 mae.m9 <- pred1 %>% #isi.m 12 appears to be a threshold
-  group_by(ISI_sa=if_else(isi.m < 12, 'Low', 'High'), #group by hi/lo 
-           Prediction=if_else(ROS < pred9, 'over', 'under')) %>% #over/under pred 
+  group_by(ISI_sa=if_else(isi.m < 12, 'ISI<12', 'ISI>12'), #group by hi/lo 
+           Prediction=if_else(ROS < pred9, 'Over', 'Under')) %>% #over/under pred 
   summarize(MAE=mean(diff) %>% round(2), 
             Q90AE=quantile(diff, 0.9) %>% round(2)) %>% #MAE and 90th of AE
   ungroup() 
@@ -1691,13 +1696,11 @@ pred.m9 %>%
 
 ### Expected accuracy {#expected-accuracy-1}
 
-The MAE and MAPE values (Table 1) can be used to calculate the mean and expected (e.g. 90th percentile or quantile) error associated with each model. Table 3 shows the mean and 90th quantile absolute error (MAE, Q90AE, respectively) and absolute percentage error (MAPE, Q90APE, respectively) using the example of Model 9, with $sROS=f(ISI_{sa}, SFC)$. Since there appeared to be a difference between the over- and under-prediction error potential at lower versus higher fire danger levels (e.g., Fig. 4), these categories are shown separately. Thus, Surface ROS errors of 1-2 m min^-1^ (approximate rounding of mean and Q90 absolute error of 0.6 – 1.7; Table 3) should be expected at *ISI~sa~* \< 12; and larger errors of perhaps 2-4 m min^-1^ (mean and Q90 absolute error of 1.7 – 3.5) may be expected in real world use at *ISI~sa~* of 12 – 25. In approximate percentage terms, underprediction by 30-60 %, and overprediction by 70-170 % is to be expected with these models.
+The MAE and MAPE values (Table 1) can be used to calculate the mean and expected (e.g. 90th percentile or quantile) error associated with each model. Table 3 shows the mean and 90th quantile absolute error (MAE, Q90AE, respectively) and absolute percentage error (MAPE, Q90APE, respectively) using the example of Model 9, with $sROS=f(ISI_{sa}, SFC)$. Since there appeared to be a difference between the over- and under-prediction error potential at lower versus higher fire danger levels (e.g., Fig. 4), these categories are shown separately. Thus, Surface ROS errors of 1-2 m min^-1^ (approximate rounding of mean and Q90 absolute error of 0.6 – 1.7; Table 3) should be expected at *ISI~sa~* \< 12; and larger errors of perhaps 2-4 m min^-1^ (MAE and Q90AE of 1.7 – 3.5) may be expected in real world use at *ISI~sa~* of 12 – 25. In approximate percentage terms, underprediction by 30-60 %, and overprediction by 70-170 % is to be expected with these models.
 
-While it may be inappropriate to quantitatively compare the performance of fitted models to supposedly independently-derived models, it is apparent that some of the FBP-era models performed very poorly in predicting surface ROS. Negative ER2 and MAPE values of 150 – 380 % suggest that the C-4s and C-6s models perform worse than a null model using only the mean of all observations. These models are not recommended for predicting surface fire behaviour.
+While it may be inappropriate to compare the performance of fitted models in their native dataset with that of supposedly independently-derived models, it is apparent that some of the FBP-era models performed very poorly in predicting surface ROS. Negative ER2 values and MAPE of 150 – 380 % suggest that the C-4s and C-6s models perform worse than a null model using only the mean of all observations. These models are therefore not recommended for predicting surface fire behaviour.
 
-Under very low danger conditions (e.g., FFMC \< 75 or ISI \< 1), ignition in needle fuel substrates becomes highly unlikely [@beverly2007; @nadeem2020], so ROS is a minimal concern.
-
-It is expected that the quality and quantity of source data will improve over time, allowing for periodic reanalysis and improvement of these models.
+Under very low danger conditions (e.g., FFMC \< 75 or ISI \< 1), ignition in needle fuel substrates becomes highly unlikely [@beverly2007; @nadeem2020], so ROS is a minimal concern. It is expected that the quality and quantity of source data will improve over time, allowing for periodic reanalysis and improvement of these models.
 
 ## 6. References
 
@@ -1708,11 +1711,11 @@ It is expected that the quality and quantity of source data will improve over ti
 
 ### Appendix A: Fires in Ponderosa Pine-Douglas-fir stands in BC
 
-Seven\* experimental fires were conducted in open Ponderosa pine-Douglas-fir forest stands in the Dewdrop Range near Kamloops, British Columbia, in 1978-79. These fires were documented in theses by Nyberg[@nyberg1979] and Smaill [@smaill1980], while summary information and photos were incorporated into the FBP System C-7 fuel type [@forestrycanadafiredangergroup1992; @DeGroot1993].
+Seven\* experimental fires were conducted in open Ponderosa pine-Douglas-fir forest stands in the Dewdrop Range near Kamloops, British Columbia, in 1978-79. These fires were well documented in theses by Nyberg[@nyberg1979] and Smaill [@smaill1980]. Summary information and photos were incorporated into the FBP System C-7 fuel type, where these observations were combined with several wildfires to complete the fuel type [@forestrycanadafiredangergroup1992; @DeGroot1993].
 
-These documents were reanalyzed in order to merge these fires into the modelling database. Stand structure at Dewdrop consisted of a low density overstory and mostly herbaceous understory; mean canopy closure was 27.2 %. Litter and duff cover were described as patchy to nonexistent [@nyberg1979]. In the FBP System database, surface fuel consumption (SFC) was reported for only one observation (Plot 9), with a very high total SFC value of 5.3 kg m^-2^, including \> 5 kg m^-2^ of woody fuel consumption.
+The information in these two theses were reanalyzed in order to merge these fires into the modelling database. Stand structure at Dewdrop consisted of a low density overstory and mostly herbaceous understory; mean canopy closure was 27.2 %. Litter and duff cover were described as patchy to nonexistent [@nyberg1979]. In the FBP System database, surface fuel consumption (SFC) was reported for only one observation (Plot 9), with a very high total SFC value of 5.3 kg m^-2^, including \> 5 kg m^-2^ of woody fuel consumption.
 
-The original SFC estimate for Plot 9 included consumption of all downed woody fuels, including from large diameter coarse woody debris (CWD; \> 7.6 cm). While methodologically consistent with other FBP experimental burns [@stocks1987b; @stocks1989], the Plot 9 CWD consumption represents the great majority of the total SFC and represents an outlier compared to other experiments. For instance, the mean CWD proportion of SFC at the Ontario Kenshoe Lake and Sharpsand Creek sites was 9.2 % [c.f. @stocks1987b; @stocks1989], compared with 50.2 % at Dewdrop (Mann-Whitney U-test: p \< 0.001). The difference is accounted by both higher seasonal drought conditions during the Dewdrop burns (mean Drought Code (DC): 394 at Dewdrop vs 111 at Kenshoe Lake and 161 at Sharpsand; see @vanwagner1987 for DC description), and probably the overall frequency of larger diameter trees at Dewdrop (\> 17 % of trees in the '\>25 cm' DBH class; cf. [@nyberg1979]); compared with, e.g. \~ 1 % of trees in the '\> 23 cm' DBH class at Kenshoe Lake ('White River'); [@walker1975]).
+The original SFC estimate for Plot 9 included consumption of all downed woody fuels, including from large diameter coarse woody debris (CWD; \> 7.6 cm). While methodologically consistent with other FBP experimental burns [@stocks1987b; @stocks1989], the Plot 9 CWD consumption represents the great majority of the total SFC and represents an outlier compared to other experiments. For instance, the mean CWD proportion of SFC at the Ontario Kenshoe Lake and Sharpsand Creek sites was 9.2 % [c.f. @stocks1987b; @stocks1989], significantly different from the 50.2 % proportion of consumption at Dewdrop (Mann-Whitney U-test: p \< 0.001). The difference is explained by both higher seasonal drought conditions during the Dewdrop burns (mean Drought Code (DC): 394 at Dewdrop vs 111 at Kenshoe Lake and 161 at Sharpsand; see @vanwagner1987 for DC description), and probably the overall frequency of larger diameter trees at Dewdrop (\> 17 % of trees in the '\>25 cm' DBH class; cf. [@nyberg1979]); compared with, e.g. \~ 1 % of trees in the '\> 23 cm' DBH class at Kenshoe Lake ('White River'); [@walker1975]).
 
 Including contributions from CWD in surface fires is somewhat at odds with current understanding of flame front dynamics. Consumption studies suggest that most CWD consumption in PPDF stands occurs during post-frontal smoldering rather than during flaming combustion [@monsanto2008; @brown2003; @ottmar2014]. The high SFC at Dewdrop from CWD therefore could overpredict fire intensity and crown fire tendency [@vanwagner1977; @perrakis2023]. To compensate, new SFC values at Dewdrop were calculated excluding the CWD contribution. Including only consumption from finer fuels (grass and herbs, litter, duff, and woody debris \< 7.6 cm) resulted in a recalculated (notably lower: 2.01 kg m^-2^) value for Plot 9.\*\* SFC values calculated using the same methods for Plots 1-6 were 0.47 – 1.39 kg m^-2^.
 
