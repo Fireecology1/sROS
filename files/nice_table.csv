@@ -1,0 +1,9 @@
+,predictor,Best1,Best2-v1,Best2-v2,Best2-v3,Best3-v1,Best3-v2,Best3-v3,Best4-v1,Best4-v2,Best4-v3
+1,ISI2,1,1,2,NA,1,2,3,1,2,3
+2,isi.m2,2,NA,2,3,NA,2,NA,NA,NA,NA
+3,isi.m,3,NA,NA,NA,1,NA,NA,NA,NA,NA
+4,FTPPDF,NA,1,NA,NA,1,2,3,1,2,3
+5,MC.SA_dens,NA,NA,NA,3,NA,NA,NA,NA,2,NA
+6,ISI,NA,NA,NA,NA,NA,NA,3,1,2,3
+7,FFMC,NA,NA,NA,NA,NA,NA,NA,1,NA,NA
+8,MC.SA,NA,NA,NA,NA,NA,NA,NA,NA,NA,3
