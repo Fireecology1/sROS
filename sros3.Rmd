@@ -1837,99 +1837,37 @@ nice_table <- rank.top3b %>%
     names_from = col_name,
     values_from = pred_rank)
 
-nice_table %>% arrange(Best1v, Best2v)
+nice_table2 <- nice_table %>% arrange(Best1v, Best2v)
 
-
-#finally seems to work well.   
-
-#Old 2
-# #assign model position
-# long.pos <- wh.long %>%
-#   group_by(mod_size, model_id) %>%
-#   arrange(predictor, .by_group = TRUE) %>%
-#   mutate(position = row_number()) %>%
-#   ungroup()
-# 
-# wh.pred.rank <- long.pos %>%
-#   group_by(mod_size, position) %>% 
-#   arrange(model_rank, predictor, .by_group=TRUE) %>%
-#   mutate(pos_rank=row_number()) %>% #rank among top3 of same size containing predictor
-#   ungroup() %>%
-#   filter(pos_rank <=3)
-# 
-# #label columns by size and position
-# ranked <- wh.pred.rank %>%
-#   mutate(
-#     col_name=case_when(
-#     mod_size==1 ~ 'Best1',
-#     mod_size==2 ~ paste0('Best2-v', model_rank),
-#     mod_size==3 ~ paste0('Best3-v', model_rank),
-#     mod_size==4 ~ paste0('Best4-v', model_rank),
-#     TRUE ~ NA_character_)
-#   ) %>%
-#   filter(!is.na(col_name))
-# 
-# nice_table <- ranked %>%
-#   select(predictor, col_name, pos_rank) %>%
-#   distinct() %>%
-#   pivot_wider(
-#     names_from = col_name,
-#     values_from = pos_rank
-#   )
-# #test
-# 
-# #old
-# #create desired column names
-# wh.cols <- wh.pred.rank %>%
-#   mutate(col_name=case_when(
-#     mod_size==1 ~ 'Best1',
-#     mod_size==2 ~ paste0('Best2-', model_rank),
-#     mod_size==3 ~ paste0('Best3-', model_rank),
-#     mod_size==4 ~ paste0('Best4-', model_rank),
-#     TRUE ~ NA_character_)
-#   ) %>%
-#   filter(!is.na(col_name))
-# 
-# wh.rank.cols <- wh.cols %>%
-#   group_by(col_name) %>%
-#   arrange(model_rank, predictor, .by_group=TRUE) %>%
-#   mutate(
-#     col_rank=row_number()
-#   ) %>%
-#   ungroup()
-# 
-# nice_table <- wh.rank.cols %>%
-#   select(predictor, col_name, col_rank) %>%
-#   distinct() %>%
-#   pivot_wider(
-#     names_from = col_name,
-#     values_from = col_rank
-#   )
-# 
-# 
-# wide.df <- wh.cols %>%
-#   select(predictor, col_name, rank_within) %>%
-#   distinct() %>%
-#   pivot_wider(
-#    names_from=col_name,
-#    values_from=rank_within
-#   ) 
-# 
-# 
-# nice_table0 <- wh.pred.rank %>%
-#   transmute(
-#     predictor,
-#     mod_size,
-#     model_rank,
-#     col_name=paste0('Best', mod_size, 'var'), #Best1, Best2...
-#     rank.index=paste0(mod_size, '-', model_rank))
-# #  distinct() %>%
-# nice_table <- nice_table0 %>% 
-#   pivot_wider(
-#     names_from=col_name,
-#     values_from=rank.index) %>%
-#   arrange(rank.index)
-
+#make pretty with gt()  Table A1
+t.a1 <- nice_table2 %>%
+  gt(rowname_col='predictor') %>%
+  tab_header(
+    title='Matrix of predictors using best ROS models',
+    subtitle='Values indicate predictor frequency scores'
+  ) %>%
+  tab_spanner(
+    label='Columns indicate best 1-5 variable (Best1v, Best2v, etc.) models',
+    columns=c(Best1v, Best2v, Best3v, Best4v, Best5v)
+  ) %>%
+  #NA values
+  fmt_missing(
+    columns=everything(),
+    missing_text = '-'
+  ) %>%
+  tab_options(
+    table_body.hlines.width =px(0),
+    table_body.vlines.width=px(0),
+    column_labels.border.bottom.width =px(0),
+    table.font.size = px(11),
+    heading.align ='left',
+    table.border.top.width =px(1),
+    table.border.top.style ='solid', 
+    table.border.bottom.width = px(1),
+    table.border.bottom.style ='solid' 
+  )
+  
+t.a1
 
 ```
 
