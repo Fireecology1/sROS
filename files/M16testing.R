@@ -11,11 +11,14 @@ m16.funC <- function(isim, ft='Con') {
 #                        ROS ~ (asy.slope1 * ISI + asy.yInt1) * (1-exp(-b*ISI))^c, 
 #                      start=list(b=0.1, c=3))
 
-s.fires.mod$FT_P <- as.numeric(s.fires.mod$FT == "PPDF")
-s.fires.mod$FT_D <- as.numeric(s.fires.mod$FT == "Decid")
+s.fires.mod2 <- s.graph
 
-mXX.sf.agg.asy<- nls(data=s.fires.mod, formula= #substitute for sf.crisi.mod
-    ROS ~ (asy.slope1 * ISI + asy.yInt1) * (1-exp(-b*ISI))^c +
+s.fires.mod2$FT_P <- as.numeric(s.fires.mod$FT == "PPDF")
+s.fires.mod2$FT_D <- as.numeric(s.fires.mod$FT == "Decid")
+
+
+mXX.sf.agg.asy<- nls(data=s.fires.mod2, formula= #substitute for sf.crisi.mod
+    ROS ~ (asy.slope1 * ISI + asy.yInt2) * (1-exp(-b*ISI))^c +
       aP*FT_P + aD*FT_D,
                      start=list(b=0.1, c=3, aP=0, aD=0))
 ##aP and aD both significant?! 
@@ -29,10 +32,9 @@ mYY.sf.agg.asy<- nls(data=s.fires.mod, formula= #substitute for sf.crisi.mod
                        ROS ~ (asy.slope1 * isi.m + asy.yInt1) * (1-exp(-b*isi.m))^c +
                        aP*FT_P + aD*FT_D,
                      start=list(b=0.1, c=3, aP=0, aD=0))
+#aP, aD NS
+
 #########test on graph below
-
-
-
 
 
 m16.funP <- function(isim, ft='PPDF') {
@@ -51,7 +53,7 @@ m16.funD <- function(isim, ft='Decid') {
 
 
 ####
-figX <- ggplot(s.fires.mod %>% filter(!is.na(SFC)), 
+figX <- ggplot(s.fires.mod2 %>% filter(!is.na(SFC)), 
                aes(x=ISI, y=ROS)) +  
   scale_colour_manual(values=c(
     'red2',
@@ -64,13 +66,13 @@ figX <- ggplot(s.fires.mod %>% filter(!is.na(SFC)),
              fill='darkgray', alpha=0.5) + #PPDF original
   geom_point(data=wildfires, colour='black', fill='black', size=1, 
              shape=21) +
-  stat_function(fun=mXX.fun, args=list(ftd=0, ftp=0),
+  stat_function(fun=sf.m15b, args=list(ftd=0, ftp=0),
                 colour='red') + #con
-  stat_function(fun=mXX.fun, args=list(ftd=1, ftp=0),
+  stat_function(fun=sf.m15b, args=list(ftd=1, ftp=0),
                 colour='green') +
-  stat_function(fun=mXX.fun, args=list(ftd=0, ftp=1), 
+  stat_function(fun=sf.m15b, args=list(ftd=0, ftp=1), 
                 colour='blue') +
-  # stat_function(fun=m16.funC, colour='red') +
+  stat_function(fun=sf.asyCon.fun, colour='black') +
   # stat_function(fun=m16.funD, colour='green') +
   # stat_function(fun=m16.funP, colour='blue') +
 #  stat_function(fun=m16.fun(ft='PPDF'), color='blue') +
