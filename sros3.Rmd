@@ -154,8 +154,12 @@ m4.con.lm.mod <- lm(data=s.fires.con, formula=ROS~I(isi.m^2)-1)
 
 #conifer-only ISI^2 model
 m3.con.ISI.mod <- lm(data=s.fires.con, formula=ROS~I(ISI^2)-1)
+#keeper 
 #use for testing fuel type significance
 
+fun.m3 <- function(isi) {
+  predict(m3.con.ISI.mod, newdata=list(ISI=isi))
+}
 
 #prediction function for simple lm using isi.m
 fun.m4 <- function(isim) {
@@ -1115,11 +1119,21 @@ m16.power <-nls(data=s.con, formula=
 m17.power.sa <-nls(data=s.con, formula=
   ROS ~ a * ws^b * exp(c*MC.SA), start=list(a=1, b=1, c=-0.05))
 #better than sloped asy model
-#function
-sf.powersa <- function(ws, mcsa=10) {
+
+#functions
+#m17 - mcsa/ISIsa
+fun.powersa <- function(ws, mcsa=10) {
   isim=isi.mcsa(mcsa=mcsa, ws=ws)
   rosi=predict(m17.power.sa, newdata=data.frame(ws=ws, MC.SA=mcsa))
   return(rosi)
+}
+
+#m16 - mc/ISI
+fun.power <- function(ws, ffmc=90) {
+  isi=ISI(ws=ws, ffmc=ffmc)
+  rosi=predict(m16.power, 
+               newdata=data.frame(ws=ws, MC.FFMC=mcF(ffmc)))
+  return(rosi)             
 }
 
 #power models use both ws and mc, so to show them in an ISI or ISI_sa graph, 
@@ -1133,11 +1147,15 @@ wind.range3 <- seq(0, 10, by=0.5)
 mc.power <- 9
 mc.power2 <- 13
 mc.power3 <- 17
-ROS.powersa.points <- sf.powersa(
+#for ISI model m16
+ffmc.power <- 91.7
+ffmc.power2 <- 88
+ffmc.power3 <- 84.4
+ROS.powersa.points <- fun.powersa(
   ws=wind.range, mcsa=mc.power) #ROS using power model
-ROS.powersa.points2 <- sf.powersa( #for low range
+ROS.powersa.points2 <- fun.powersa( #for low range
   ws=wind.range2, mcsa=mc.power2)
-ROS.powersa.points3 <- sf.powersa(
+ROS.powersa.points3 <- fun.powersa(
   ws=wind.range3, mcsa=mc.power3)
 isim.powersa.points <- isi.mcsa(
   ws=wind.range, mcsa=mc.power) #ISI_sa using fixed mc of 9
@@ -1146,18 +1164,17 @@ isim.powersa.points2 <- isi.mcsa(
 isim.powersa.points3 <- isi.mcsa(
   ws=wind.range3, mcsa=mc.power3)
 
-
 #now I can graph these two
-power.df <- data.frame(ROS=ROS.powersa.points,
+powersa.df <- data.frame(ROS=ROS.powersa.points,
                        isi.m=isim.powersa.points)
 
-power2.df <- data.frame(ROS=ROS.powersa.points2, 
+powersa2.df <- data.frame(ROS=ROS.powersa.points2, 
                         isi.m=isim.powersa.points2)
 
-power3.df <- data.frame(ROS=ROS.powersa.points3,
+powersa3.df <- data.frame(ROS=ROS.powersa.points3,
                         isi.m=isim.powersa.points3)
 
-powercon.df <- bind_rows(power.df, power2.df, power3.df)
+powersacon.df <- bind_rows(powersa.df, powersa2.df, powersa3.df)
 
 #Exploratory asymptote graph - conifer, ISI.m
 #Maybe Fig 5?
@@ -1172,6 +1189,7 @@ ag4 <- ggplot(s.con, aes(x=isi.m, y=ROS)) +
                 colour='gray', linetype='dashed') + #asymptote
   coord_cartesian(ylim=c(0, 30), xlim=c(0, 60))
 
+
 #with FT
 #+     aP*FT_P + aD*FT_D, start=list(b=0.1, c=3, aP=0, aD=0))
 s.power.FT <-nls(data=s.fires.mod2, formula=
@@ -1179,8 +1197,10 @@ s.power.FT <-nls(data=s.fires.mod2, formula=
   aP*FT_P + aD*FT_D, 
   start=list(a=1, b=1, c=-0.05, aP=0, aD=0))
 #ft factors NS (biggest dif is about ROS 0.6 m/min higher for PPDF than con)
-
 #Nope - stick with slope asymptote for m18 FT model
+
+
+
 
 #####
 
@@ -1738,17 +1758,11 @@ mean15 <-acc.extract %>% pull('ISI=15') %>% mean()
 
 Table 1 shows evaluation metrics for a partial list of fitted models, as well as *ROS* predictions at three levels of *ISI* or *ISI~sa~* for comparison. Other variables (FFMC, SFC, FT) were assigned values where required for calculation purposes, as noted. The number of observations used (N) varied from `r min(acc.tab4$N, na.rm=T)` to `r max(acc.tab4$N, na.rm=T)`. Models using the SFC predictor excluded observations without estimated SFC, resulting in slightly smaller datasets. Model 1 used all conifer and PPDF observations (N=65), while other models used either the 'Aggregated' dataset (N=80-91), including all fires in boreal conifer, deciduous-mixed, and PPDF stands; or the 'boreal conifer' dataset (N=51-56), using only fires in spruce, pine-spruce, or boreal/sub-boreal pine stands (for most site and experimental descriptions see [@perrakis2023], Supplemental Material). Model 3 included all observations originally classed as surface fires, while models 6–18 excluded fires with significant crown fuel consumption, as noted. Excluding the FBP and CEVW models (19–22), *ISI* or *ISI~sa~* values of 5, 10, and 15 conditions predict ROS of `r min5` – `r max5` (mean: `r mean5`) m min^-1^; `r min10` – `r max10` (mean: `r mean10`) m min^-1^; and `r min15` – `r max15` (mean: `r mean15`) m min^-1^, respectively. Models forms using the boreal conifer observations (models 1, 3, 12-16) had lower variability and thus better performance (lower RMSE, higher ER2, lower MAE and MAPE) than analogous models fitted to the larger aggregated dataset.
 
-The best models based on the evaluation diagnostics varied depending on dataset (conifer vs. aggregated) and the range of input variables. Simple and relatively high performing models were obtained using the *ISI^2* alone, though with much better performance (higher ER2, lower MAE, AIC and other error measures) using the conifer (m3) than the aggregated (m6) datasets. Non-linear model forms using Eq. 1 or 4 were unable to automatically fit the asymptote parameters. Visual inspection produced asymptotes (*m*=0.15, *i~agg~*=10, *i~con~*=13) that fitted fairly high-performing models for the aggregated and conifer datasets, respectively (m10-11, m12-13). The best performance overall across the range of data was achieved by the  models with separate wind and litter moisture inputs (e.g. m16).
-
-For the aggregated dataset models (6-18), performance improved when SFC or FT were included as predictors compared with using only ISI or ws and mc.  
-
-[cut all this; we then estimated the parameters of an oblique asymptote (Eq. [4]) based on visual inspection and an assumed gradual ROS rise beyond the range of data to account for some extrapolation. While symptotes for conifer and aggregated datasets were slightly different, similar in slope but translated slightly higher for conifer models compared with aggregate data models; aggregate: *m*=0.15, *i*=10; conifer: *m*=0.15, *i*=13. The remaining parameters were fitted to the data, producing some of the best models for the aggregated forest data, particularly with *ISIsa* (m11) or when FT (m16) was included: RMSE \< 1.5, ER2 ~ 0.6, MAE ~1 m min^-1^). The best aggregated d 
-
-The corresponding aggregated forest data models performed adequately, but reflected greater variability in the source data at higher wind and *ISI* or *ISI~sa~* levels. The best aggregate data model included *ISI~sa~* and *SFC* predictors (Model 9: RMSE=1.32, ER2=0.662, MAE \<1 m min^-1^). The best nonlinear aggregate model was Model 11 (RMSE=1.43, ER2=0.589, MAE=1.05 m min^-1^). Extended predictions showing expected ROS at varying SFC and FT levels (Models 7, 9, and 15) are shown in Appendix C.]
+The best models based on the evaluation diagnostics varied depending on dataset (conifer vs. aggregated) and the range of input variables. Simple and relatively high performing models were obtained using the *ISI^2* alone, though with much better performance (higher ER2, lower MAE, AIC and other error measures) using the conifer (m3) than the aggregated (m6) datasets. Non-linear model forms using Eq. 1 or 4 were unable to automatically fit the asymptote parameters, so visual inspection was used to estimate asymptotes (*m*=0.15, *i~agg~*=10, *i~con~*=13, for aggregate and conifer data, respectively). These allowed for fitting of relatively high-performing models for the aggregated and conifer datasets (m10-11, m12-13). The best performance overall across the range of data was achieved by the  models with separate wind and litter moisture inputs (e.g. m16: ER2=0.803, AIC=145.2). For the aggregated dataset models (6-18), performance improved when SFC or FT were included as predictors compared with using only ISI or ws and mc.   
 
 Table 1 also compares ROS predictions for conifer stands from the CEVW and FBP surface fire functions, as well as the M25% model, with the new fitted models. High MAE and MAPE values, and negative values for ER2, suggest very poor performance by (especially) the C-4s and C-6s models compared to the fire observations. The C-3s, D1, and M25% models, in contrast, are in the lower end of the range of model performance, but otherwise appear to produce unbiased results. When evaluated against the deciduous data alone, the D-1 model had the following diagnostics: RMSE=0.568; MAE=1.297; MAPE=0.988; ER2=0.543.[^1] 
 
-As for the simple forced-intercept wind speed model (Fig. 2), the best overall fit was with \beta~1~ of 0.2, with RMSE=1.62. However, at higher wind speed values, \beta~1~ of 0.25 was marginally superior (RMSE=1.19) than \beta~1~ of 0.2 (RMSE=1.21). 
+As for the simple forced-intercept wind speed model (Fig. 2), the best overall fit was with \beta~1~ of 0.2, with RMSE=1.62. However, at higher wind speed values, \beta~1~ of 0.25 was marginally superior (RMSE=1.19) than \beta~1~ of 0.2 (RMSE=1.21). The '25%' model therefore uses 1.5% of the 10-m wind speed alone using identical units (e.g. m s^-1^), or 25% of the 10-m wind speed in km h^-1^ to give sROS in m min^-1^ (e.g., ws of 20 km h^-1^ yields estimated ROS of 4 m min^-1^).
 
 [^1]: Note: the dataset for the D-1 model originally described by [@forestrycanadafiredangergroup1992] differs only from present deciduous database by two additional wildfires, excluded here due to a lack of documentation.
 
@@ -1878,19 +1892,19 @@ ef.sfc.mod20 <- ef.r.squared(
 #do this on crisiCon, crisimCon, 
 
 #jack.crisiCon <- nlstools::nlsJack(sf.con.mod)  #old, fixed a
-jack.crisiCon <- nlstools::nlsJack(m13.sf.con.asy)
+jack.crisiCon <- nlstools::nlsJack(m12.conISI)
 #summary(jack.crisiCon)
 #crisiCon: rows 10, 28, 49, 51 (s.con2)
 
-jack.crisimCon <-nlstools::nlsJack(m14.sf.conM.asy)
+jack.crisimCon <-nlstools::nlsJack(m13.conSa)
 #jack.crisimCon <-nlstools::nlsJack(sf.crisimCon.mod)
 #summary(jack.crisimCon)
 #crisimCon: rows 10, 28, 51
 
-jack.crisimAgg <-nlstools::nlsJack(m11.sf.aggM.asy) #s.fires.mod
+jack.crisimAgg <-nlstools::nlsJack(m11.agSa) #s.fires.mod
 #28, 52, 54, 60, 83, 88, 89, 91  #omit 83; no SFC
 
-jack.crisiAgg <-nlstools::nlsJack(m10.sf.agg.asy) 
+jack.crisiAgg <-nlstools::nlsJack(m10.agISI) 
 #28, 58, 59, 60, 88, 91  #only points sig. to both b and c
 
 #for lm models, use broom::augment to run Cook's D
@@ -1921,14 +1935,19 @@ cook.ISI2sfc <- broom::augment(m7.sros.ISI2SFC.mod) %>%
 #ISI2sfc: rows 58, 28, 88, 59, 60
 
 #model labels
-lab1 <- 'M9' #change to dynamic label 
+lab1 <- 'm9' #change to dynamic label 
 lab2 <- 'M11'
-lab3 <- 'M14'  #crisim.con
+lab3 <- 'm17'  #m17.power.sa
 
 sf.m14 <-function(ws, mcf) {
   predict(m14.power, newdata=data.frame(ws=ws, MC.FFMC=mcf)
   )        
 }
+
+# sf.m17 <- function() {
+#   predict(m17.power.sa, newdata=list(MC.SA=8, ws=ws))
+# }
+
   
 fig4 +
   # geom_point(data=cook.isim2sfc, shape=5, colour='black', 
@@ -1940,21 +1959,25 @@ fig4 +
   geom_point(data=s.con2 %>% slice(c(10, 28, 51)) %>% 
               select(fire, ISI, isi.m, ROS, FT), shape=5,
               colour='black', size=5) + #diamonds - influ to con mods
-  stat_function(fun=sf.isim2sfc15.fun, color='purple', 
+  stat_function(fun=sf.isim2sfc.fun, args=list(SFC=1), color='purple', #m9
                 linetype='dashed') +
 #  stat_function(fun=sf.isim2sfc3.fun, color='red') +
-  stat_function(fun=sf.crisim.fun, color='purple') +
+  stat_smooth(data=powerconsa.df, colour='red') + #m17
+  #stat_function(fun=sf.crisim.fun, color='purple') +
   stat_function(fun=fun.m11, colour='pink') +
 
-  geom_text(x=23, y=sf.isim2sfc15.fun(23)+1, label=lab1, 
+  geom_text(x=23, y=sf.isim2sfc.fun(isim=23, SFC=1)+1, 
+            label=lab1, #m9 label
             colour='purple', size=4) +
-  geom_text(x=24, y=sf.crisim.fun(24)-1, label=lab2,
-            colour='purple') +
-  geom_text(x=19, y=sf.crisimCon.fun(19)+1, label=lab3,
-            colour='pink') +
+  geom_text(x=24, y=fun.m11(24)-1, label=lab2, #to.here Dec31 2025
+            colour='pink') + #m11
+  geom_text(x=19, y=fun.powersa(ws=25, ffmc=92)+1, 
+            label=lab3, #m17
+            colour='red') +
   labs(x=expression(ISI[sa]), y='ROS (m/min)', size=expression(SFC~(kg/m^{2})), ## ~ is space; ^{2} is superscript 2 for squared term
        colour='Fuel type') +
-  theme(legend.position='none')
+  theme(legend.position='none') +
+  coord_cartesian(xlim=c(0, 25), ylim=c(0, 14))
   
 ```
 
@@ -1976,6 +1999,7 @@ Individual observations were evaluated for leverage in the best models using Coo
 lab4 <- 'M15'
 lab5 <- 'M13'
 
+fig5.draft <-
 fig5 + 
   geom_point(data=s.con2 %>% slice(c(10, 28, 49, 51)) %>% #con mods jackknife
                select(ROS, ISI, SFC, FT), shape=5, size=5, colour='black') +
@@ -2001,6 +2025,51 @@ fig5 +
   labs(x='ISI', y='ROS (m/min)') +
   theme(legend.position='none')
 #  geom_point(data=d1.missing, inherit.aes=TRUE)
+
+#Simpler, better Fig5 with con data, ISI
+#Points with ISI/mc
+ROS.power.points <- fun.power(
+  ws=wind.range, ffmc=ffmc.power) #ROS using power mod; ffmc91.7
+ROS.power.points2 <- fun.power( #for low range
+  ws=wind.range2, ffmc=ffmc.power2) #ROS with ffmc88
+ROS.power.points3 <- fun.power(
+  ws=wind.range3, ffmc=ffmc.power3) #ROS w/ ffmc84.4
+isi.power.points <- ISI(ws=wind.range, ffmc=ffmc.power)
+isi.power.points2 <- ISI(ws=wind.range2, ffmc=ffmc.power2)
+isi.power.points3 <- ISI(ws=wind.range3, ffmc=ffmc.power3)
+
+power.df <-data.frame(ROS=ROS.power.points,
+                      ISI=isi.power.points)
+power2.df <-data.frame(ROS=ROS.power.points2,
+                       ISI=isi.power.points2)
+power3.df <-data.frame(ROS=ROS.power.points3,
+                       ISI=isi.power.points3)
+powercon.df <-bind_rows(power.df, power2.df, power3.df)
+
+#Figure 5 maybe
+
+#labels
+#
+fig5.ag5 <- ggplot(s.con, aes(x=ISI, y=ROS)) + 
+  geom_point() + 
+#  geom_point(data=power.df, colour='red') + 
+  stat_smooth(data=powercon.df, colour='red',
+              method='gam', linewidth=0.5)+  #new m16 model work
+  stat_function(fun=fun.m12, xlim=c(0, 50), colour='gray5') + #sl.asy
+  stat_function(fun=fun.m3, xlim=c(0, 50), colour='blue') + #fixed
+  #stat_function(fun=sf.powersa, xlim=c(0, 70), colour='red')+ #power func
+  stat_function(fun=asym4, xlim=c(0, 50), 
+                colour='gray', linetype='dashed') + #asymptote
+  coord_cartesian(ylim=c(0, 30), xlim=c(0, 45)) +
+  geom_text(label='m12', x=30, y=fun.m12(30)-2) +
+  geom_text(label='m3', x=28, y=fun.m3(28)+4) +
+  geom_text(label='m17', x=35, 
+            y=fun.power(ws=38, ffmc=ffmc.power)+2) +
+  theme_classic()
+
+fig5.ag5
+
+
 
 ```
 
